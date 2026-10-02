@@ -1,30 +1,20 @@
 import { jsPDF } from 'jspdf';
 import { APP_NAME } from '../config';
-import { getLayout, type SheetLayout, type SheetOptions } from '../layout/sheetLayout';
+import { getLayout, type Formato, type HeaderBox, type SheetLayout } from '../layout/sheetLayout';
 
-const BUBBLE_GRAY = 150;
+const BUBBLE_GRAY = 160;
 
-function drawPage(doc: jsPDF, l: SheetLayout) {
-  // Marcadores
-  doc.setFillColor(0, 0, 0);
-  for (const m of l.markers) doc.rect(m.cx - m.size / 2, m.cy - m.size / 2, m.size, m.size, 'F');
-
-  // Tira de formato
-  for (const c of l.formatCode) if (c.on) doc.rect(c.x, c.y, c.size, c.size, 'F');
-
-  // Encabezado
-  const hb = l.headerBox;
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.7);
+function drawHeader(doc: jsPDF, hb: HeaderBox) {
   doc.setFont('helvetica', 'normal');
   // Un solo tamaño de letra para todas las etiquetas, el mayor que quepa en todas.
   let size = Math.min(15, ...hb.rows.map((r) => r.h * 1.3));
   doc.setFontSize(size);
   const cabe = () => hb.rows.every((r) => r.cells.every((c) => doc.getTextWidth(c.label) <= c.labelW - 3));
   while (size > 6 && !cabe()) doc.setFontSize((size -= 0.5));
+  doc.setDrawColor(0);
   for (const row of hb.rows) {
     for (const cell of row.cells) {
-      doc.setFillColor(215, 215, 215);
+      doc.setFillColor(200, 200, 200);
       doc.rect(cell.x, row.y, cell.labelW, row.h, 'F');
       doc.setTextColor(0);
       doc.setFontSize(size);
@@ -36,43 +26,63 @@ function drawPage(doc: jsPDF, l: SheetLayout) {
   }
   doc.setLineWidth(0.35);
   for (const row of hb.rows.slice(1)) doc.line(hb.rect.x, row.y, hb.rect.x + hb.rect.w, row.y);
-  doc.setLineWidth(0.9);
-  doc.roundedRect(hb.rect.x, hb.rect.y, hb.rect.w, hb.rect.h, 3, 3, 'S');
+  doc.setLineWidth(0.8);
+  if (hb.rounded) doc.roundedRect(hb.rect.x, hb.rect.y, hb.rect.w, hb.rect.h, 3, 3, 'S');
+  else doc.rect(hb.rect.x, hb.rect.y, hb.rect.w, hb.rect.h, 'S');
+}
 
-  // Casillas del ID
+function drawPage(doc: jsPDF, l: SheetLayout) {
+  doc.setFillColor(0, 0, 0);
+  for (const m of [...l.markers, ...l.blockMarkers]) doc.rect(m.x, m.y, m.size, m.size, 'F');
+
+  const ck = l.checker;
+  ck.bits.forEach((fila, r) =>
+    fila.forEach((on, c) => on && doc.rect(ck.x + c * ck.pitchX, ck.y + r * ck.pitchY, ck.size, ck.size, 'F')),
+  );
+
+  for (const hb of l.headers) drawHeader(doc, hb);
+
+  doc.setDrawColor(0);
   doc.setLineWidth(0.3);
-  doc.setDrawColor(90);
-  for (const b of l.idBoxes) doc.rect(b.x, b.y, b.w, b.h, 'S');
+  for (const b of l.boxes) doc.rect(b.x, b.y, b.w, b.h, 'S');
 
-  // Burbujas
+  doc.setDrawColor(215);
+  doc.setLineWidth(0.5);
+  for (const b of l.grayRects) doc.rect(b.x, b.y, b.w, b.h, 'S');
+  for (const ln of l.lines) {
+    doc.setDrawColor(ln.gray);
+    doc.setLineWidth(ln.width);
+    doc.line(ln.x1, ln.y1, ln.x2, ln.y2);
+  }
+
   doc.setDrawColor(BUBBLE_GRAY);
   for (const b of [...l.preguntas.flat(), ...l.version, ...l.id.flat()]) {
-    doc.setLineWidth(b.r > 3 ? 0.55 : 0.35);
+    doc.setLineWidth(b.r > 3 ? 0.5 : 0.35);
     doc.circle(b.cx, b.cy, b.r, 'S');
   }
 
-  // Textos
   for (const t of l.textos) {
     doc.setFont('helvetica', t.bold ? 'bold' : 'normal');
     doc.setFontSize(t.size);
     doc.setTextColor(t.color ?? 0);
-    doc.text(t.text, t.x, t.y, { align: t.align ?? 'left' });
+    doc.text(t.text, t.x, t.y, { align: t.align ?? 'left', angle: t.angle ?? 0 });
   }
   doc.setTextColor(0);
 }
 
-export interface GenerateOptions extends SheetOptions {
+export interface GenerateOptions {
+  formato: Formato;
   copias?: number;
 }
 
 export function generateSheetPdf(opts: GenerateOptions): jsPDF {
-  const layout = getLayout(opts);
+  const layout = getLayout(opts.formato);
   const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
   doc.setProperties({
-    title: `${APP_NAME} – Hoja de respuestas de ${layout.options.formato} preguntas`,
+    title: `${APP_NAME} – Hoja de respuestas de ${opts.formato} preguntas`,
     author: APP_NAME,
     creator: APP_NAME,
-    subject: 'Hoja de respuestas de opción múltiple',
+    subject: 'Hoja de respuestas de opción múltiple (CC BY-SA 3.0, basada en ZipGrade)',
   });
   const copias = Math.max(1, Math.min(200, Math.round(opts.copias ?? 1)));
   for (let i = 0; i < copias; i++) {
@@ -82,7 +92,6 @@ export function generateSheetPdf(opts: GenerateOptions): jsPDF {
   return doc;
 }
 
-export function sheetFileName(o: SheetOptions): string {
-  const opc = o.opciones === 5 ? 'AE' : 'AD';
-  return `${APP_NAME}_Hoja_${o.formato}_${opc}${o.formato === 20 ? '' : `_ID${o.idDigitos}`}.pdf`;
+export function sheetFileName(formato: Formato): string {
+  return `${APP_NAME}_Hoja_${formato}_preguntas.pdf`;
 }

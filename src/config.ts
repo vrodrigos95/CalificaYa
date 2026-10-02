@@ -20,5 +20,4 @@ export const config = {
   maxActivaciones: num(env.VITE_MAX_ACTIVACIONES, 3),
   diasRevalidacion: num(env.VITE_DIAS_REVALIDACION, 30),
   diasGracia: num(env.VITE_DIAS_GRACIA, 45),
-  idDigitosDefault: num(env.VITE_ID_DIGITOS_DEFAULT, 9),
 } as const;

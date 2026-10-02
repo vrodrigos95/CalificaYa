@@ -62,7 +62,7 @@ export default function Claves() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link to={`/claves/${c.id}`} className={btn.small}>Editar</Link>
                   <button onClick={() => onDuplicar(c.id)} className={btn.small}>Duplicar</button>
-                  <Link to={`/hojas?formato=${formatoParaClave(c.numPreguntas)}&opciones=${c.numOpciones}`} className={btn.small}>
+                  <Link to={`/hojas?formato=${formatoParaClave(c.numPreguntas)}`} className={btn.small}>
                     Hoja PDF
                   </Link>
                   <button onClick={() => onBorrar(c)} className={`${btn.small} border-red-300 text-red-700`}>Borrar</button>

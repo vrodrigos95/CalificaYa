@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import Screen, { btn } from '../components/Screen';
-import { config } from '../config';
+import { ID_DIGITOS } from '../layout/sheetLayout';
 import { FORMATOS, type Formato } from '../layout/sheetLayout';
 import { downloadBlob } from '../lib/download';
 
@@ -9,8 +9,6 @@ export default function Hojas() {
   const [params] = useSearchParams();
   const fParam = Number(params.get('formato'));
   const [formato, setFormato] = useState<Formato>(FORMATOS.includes(fParam as Formato) ? (fParam as Formato) : 50);
-  const [opciones, setOpciones] = useState<4 | 5>(params.get('opciones') === '4' ? 4 : 5);
-  const [idDigitos, setIdDigitos] = useState(config.idDigitosDefault);
   const [copias, setCopias] = useState(1);
   const [generando, setGenerando] = useState(false);
 
@@ -19,9 +17,8 @@ export default function Hojas() {
     try {
       // Carga diferida: jsPDF solo se descarga cuando se necesita.
       const { generateSheetPdf, sheetFileName } = await import('../pdf/generateSheet');
-      const o = { formato, opciones, idDigitos };
-      const doc = generateSheetPdf({ ...o, copias });
-      downloadBlob(doc.output('blob'), sheetFileName(o));
+      const doc = generateSheetPdf({ formato, copias });
+      downloadBlob(doc.output('blob'), sheetFileName(formato));
     } finally {
       setGenerando(false);
     }
@@ -43,45 +40,17 @@ export default function Hojas() {
               </button>
             ))}
           </div>
-          {formato === 20 && (
-            <p className="mt-2 text-sm text-amber-700">
-              La hoja de 20 no lleva código de alumno: los alumnos se identifican por nombre al revisar.
+          <p className="mt-2 text-sm text-slate-600">
+            {formato === 20
+              ? 'Sin código de alumno: los alumnos se identifican por nombre al revisar.'
+              : `Código de alumno de ${ID_DIGITOS[formato]} dígitos · versiones A–E · opciones A–E.`}
+          </p>
+          {formato === 50 && (
+            <p className="mt-1 text-sm text-amber-700">
+              El código de 9 dígitos UdeG no cabe en esta hoja (5 dígitos). Si lo necesitas, usa la de 100.
             </p>
           )}
         </section>
-
-        <section>
-          <h2 className="mb-2 font-semibold text-slate-800">Opciones por pregunta</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {([5, 4] as const).map((n) => (
-              <button
-                key={n}
-                onClick={() => setOpciones(n)}
-                className={`rounded-xl border py-3 font-semibold ${opciones === n ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-300 bg-white text-slate-800'}`}
-              >
-                {n === 5 ? 'A – E' : 'A – D'}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {formato !== 20 && (
-          <section>
-            <label className="mb-2 block font-semibold text-slate-800" htmlFor="digitos">
-              Dígitos del código de alumno
-            </label>
-            <input
-              id="digitos"
-              type="number"
-              min={1}
-              max={15}
-              value={idDigitos}
-              onChange={(e) => setIdDigitos(Math.max(1, Math.min(15, Number(e.target.value) || 1)))}
-              className="w-28 rounded-xl border border-slate-300 px-3 py-2 text-lg"
-            />
-            <p className="mt-1 text-sm text-slate-500">El código UdeG tiene 9 dígitos.</p>
-          </section>
-        )}
 
         <section>
           <label className="mb-2 block font-semibold text-slate-800" htmlFor="copias">
@@ -103,7 +72,7 @@ export default function Hojas() {
           {generando ? 'Generando…' : 'Descargar PDF (tamaño carta)'}
         </button>
         <p className="text-sm text-slate-500">
-          Imprime al 100 % (sin "ajustar a la página") y sin escalar para que la lectura sea precisa.
+          Las hojas son compatibles con las de ZipGrade: la app lee ambas. Para exámenes A–D, la opción E se ignora.
         </p>
       </div>
     </Screen>

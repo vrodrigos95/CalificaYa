@@ -4,13 +4,12 @@ import { generateSheetPdf, sheetFileName } from '../src/pdf/generateSheet';
 
 describe('PDF de hojas de respuesta', () => {
   it.each([20, 50, 100] as const)('genera la hoja de %i preguntas', (formato) => {
-    const o = { formato, opciones: 5 as const, idDigitos: 9 };
-    const doc = generateSheetPdf({ ...o, copias: 2 });
+    const doc = generateSheetPdf({ formato, copias: 2 });
     expect(doc.getNumberOfPages()).toBe(2);
     const buf = Buffer.from(doc.output('arraybuffer'));
     expect(buf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(buf.toString('latin1')).toContain('CalificaYa');
     mkdirSync('test-output', { recursive: true });
-    writeFileSync(`test-output/${sheetFileName(o)}`, Buffer.from(generateSheetPdf(o).output('arraybuffer')));
+    writeFileSync(`test-output/${sheetFileName(formato)}`, Buffer.from(generateSheetPdf({ formato }).output('arraybuffer')));
   });
 });
