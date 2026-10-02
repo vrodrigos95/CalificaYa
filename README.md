@@ -17,6 +17,7 @@ npm test           # pruebas automáticas (genera PDFs de muestra en test-output
 npm run build      # compilación para producción en dist/
 npm run preview    # sirve dist/ en http://localhost:4173
 npm run icons      # regenera los íconos provisionales de public/icons
+npx tsx scripts/omr-try.ts 50 1   # lee una hoja sintética y guarda test-output/foto.png y hoja.png
 ```
 
 ## Configuración
@@ -31,15 +32,25 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 | `src/layout/` | Geometría de las hojas (fuente única para PDF y OMR) y tira de formato |
 | `src/pdf/` | Generador de hojas de respuesta en PDF (jsPDF) |
 | `src/keys/` | Modelo de datos de las claves de examen |
+| `src/omr/` | Motor OMR (OpenCV.js en Web Worker) |
+| `src/grading/` | Calificación de una hoja contra la clave |
 | `src/db/` | IndexedDB (Dexie): solo claves y licencia |
 | `src/screens/` | Pantallas de la app |
-| `tests/` | Pruebas con Vitest |
+| `tests/` | Pruebas con Vitest; `tests/synthetic/` genera fotos sintéticas |
+| `scripts/extract-form-geometry.py` | Extrae la geometría de las hojas de 50/100 desde los PDF originales |
 
 ## Estado
 
 - [x] Fase 1: generador de hojas en PDF + gestión de claves
-- [ ] Fase 2: motor OMR probado con imágenes sintéticas
+- [x] Fase 2: motor OMR probado con imágenes sintéticas
 - [ ] Fase 3: escaneo en vivo con cámara
 - [ ] Fase 4: revisión y exportación a Excel
 - [ ] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
 - [ ] Fase 6: licencia con Gumroad
+
+## Hojas de respuesta y licencia
+
+Las hojas reproducen la distribución de las hojas de ZipGrade, publicadas bajo
+licencia Creative Commons Atribución-CompartirIgual 3.0. Por eso cada hoja
+generada incluye una línea de crédito y se distribuye bajo la misma licencia.
+La app lee tanto las hojas CalificaYa como las originales de ZipGrade.

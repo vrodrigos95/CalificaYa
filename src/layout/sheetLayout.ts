@@ -141,8 +141,8 @@ function layout20(): SheetLayout {
   const fy = py(477.5);
   textos.push({ text: 'Hoja de respuestas', x: px(56), y: fy - 1.6, size: 7 });
   textos.push({ text: 'CalificaYa', x: px(56), y: fy + 3.4, size: 15, bold: true });
-  textos.push({ text: CREDITO_1, x: px(272), y: fy - 1.4, size: 4.6 });
-  textos.push({ text: CREDITO_2, x: px(272), y: fy + 0.8, size: 4.6 });
+  textos.push({ text: 'Basada en las hojas de ZipGrade (zipgrade.com).', x: px(272), y: fy - 1.4, size: 4.6 });
+  textos.push({ text: 'Licencia Creative Commons BY-SA 3.0.', x: px(272), y: fy + 0.8, size: 4.6 });
   textos.push({ text: 'Rellena por completo con lápiz o pluma oscura.', x: px(272), y: fy + 3.0, size: 4.6 });
 
   const cell = 7.25 * S;

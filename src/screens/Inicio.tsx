@@ -4,6 +4,7 @@ import { APP_NAME } from '../config';
 const items = [
   { to: '/claves', title: 'Claves de examen', desc: 'Crea, edita y duplica las respuestas correctas', icon: '🔑' },
   { to: '/hojas', title: 'Hojas de respuesta', desc: 'Genera el PDF para imprimir (20, 50 o 100 preguntas)', icon: '🖨️' },
+  { to: '/probar', title: 'Probar lector', desc: 'Lee una foto de una hoja y muestra lo detectado', icon: '🔍' },
   { to: '/ajustes', title: 'Ajustes', desc: 'Licencia y preferencias', icon: '⚙️' },
 ];
 

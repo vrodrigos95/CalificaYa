@@ -9,9 +9,12 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "predev": "node scripts/copy-opencv.mjs",
+    "prebuild": "node scripts/copy-opencv.mjs"
   },
   "dependencies": {
+    "@techstark/opencv-js": "^5.0.0-release.1",
     "dexie": "^4.4.6",
     "jspdf": "^4.2.1",
     "react": "^19.3.0",
