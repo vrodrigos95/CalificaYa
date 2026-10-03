@@ -13,6 +13,7 @@ dispositivo; solo se guardan las claves de examen y el estado de la licencia.
 ```bash
 npm install
 npm run dev        # servidor de desarrollo en http://localhost:5173
+npm run dev:celular  # igual, con HTTPS y visible en la red local (la cámara del celular exige HTTPS)
 npm test           # pruebas automáticas (genera PDFs de muestra en test-output/)
 npm run build      # compilación para producción en dist/
 npm run preview    # sirve dist/ en http://localhost:4173
@@ -35,6 +36,8 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 | `src/omr/` | Motor OMR (OpenCV.js en Web Worker) |
 | `src/grading/` | Calificación de una hoja contra la clave |
 | `src/db/` | IndexedDB (Dexie): solo claves y licencia |
+| `src/session/` | Sesión de calificación (solo en memoria) |
+| `src/components/Scanner.tsx` | Cámara en vivo con captura automática |
 | `src/screens/` | Pantallas de la app |
 | `tests/` | Pruebas con Vitest; `tests/synthetic/` genera fotos sintéticas |
 | `scripts/extract-form-geometry.py` | Extrae la geometría de las hojas de 50/100 desde los PDF originales |
@@ -43,7 +46,7 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 
 - [x] Fase 1: generador de hojas en PDF + gestión de claves
 - [x] Fase 2: motor OMR probado con imágenes sintéticas
-- [ ] Fase 3: escaneo en vivo con cámara
+- [x] Fase 3: escaneo en vivo con cámara
 - [ ] Fase 4: revisión y exportación a Excel
 - [ ] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
 - [ ] Fase 6: licencia con Gumroad

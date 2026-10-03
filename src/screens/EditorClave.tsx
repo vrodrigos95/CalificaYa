@@ -14,7 +14,9 @@ import {
   type Opcion,
   type Version,
 } from '../keys/model';
-import { VERSIONES } from '../layout/sheetLayout';
+import { LETRAS, VERSIONES } from '../layout/sheetLayout';
+import Scanner from '../components/Scanner';
+import type { ReadResult } from '../omr/reader';
 import { useBeforeUnload } from '../hooks/useBeforeUnload';
 
 export default function EditorClave() {
@@ -29,6 +31,8 @@ export default function EditorClave() {
   const [puntosTodas, setPuntosTodas] = useState(1);
   const [numTexto, setNumTexto] = useState('');
   const [errores, setErrores] = useState<string[]>([]);
+  const [escaneando, setEscaneando] = useState(false);
+  const [avisoEscaneo, setAvisoEscaneo] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -119,6 +123,34 @@ export default function EditorClave() {
     delete versiones[v];
     actualizar({ ...clave!, versiones });
     setVersion(VERSIONES.find((x) => versiones[x])!);
+  }
+
+  /** Llena la versión actual con las marcas de una hoja escaneada (marcas dobles = varias correctas). */
+  function aplicarEscaneo(r: ReadResult) {
+    setEscaneando(false);
+    const ultima = r.preguntas.reduce((u, p, i) => (p.marcadas.length ? i + 1 : u), 0);
+    if (ultima === 0) {
+      setAvisoEscaneo('La hoja escaneada no tiene respuestas marcadas.');
+      return;
+    }
+    let c = clave!;
+    if (ultima > c.numPreguntas && confirm(`La hoja tiene respuestas hasta la pregunta ${ultima}. ¿Cambiar el examen a ${ultima} preguntas?`))
+      c = redimensionar(c, ultima, c.numOpciones);
+    const validas = opcionesDe(c.numOpciones);
+    const rs = (c.versiones[version] ?? reactivosVacios(c.numPreguntas)).map((reac, i) => {
+      const marcadas = (r.preguntas[i]?.marcadas ?? []).map((o) => LETRAS[o] as Opcion).filter((o) => validas.includes(o));
+      return { ...reac, correctas: marcadas };
+    });
+    const varias = rs.filter((x) => x.correctas.length > 1).length;
+    const vacias = rs.filter((x) => x.correctas.length === 0).length;
+    actualizar({ ...c, versiones: { ...c.versiones, [version]: rs } });
+    if (varias) setVarias(true);
+    setAvisoEscaneo(
+      `Se capturó la versión ${version} desde la hoja.` +
+        (varias ? ` ${varias} pregunta(s) con varias respuestas correctas.` : '') +
+        (vacias ? ` ${vacias} pregunta(s) sin respuesta: complétalas a mano.` : '') +
+        ' Revisa y guarda.',
+    );
   }
 
   async function guardar() {
@@ -233,6 +265,11 @@ export default function EditorClave() {
           </div>
         </div>
 
+        <button onClick={() => { setAvisoEscaneo(''); setEscaneando(true); }} className={`${btn.secondary} w-full`}>
+          📷 Escanear hoja con la clave (versión {version})
+        </button>
+        {avisoEscaneo && <p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-900">{avisoEscaneo}</p>}
+
         <div className="flex flex-wrap gap-4 rounded-xl bg-slate-100 p-3 text-sm">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={varias} onChange={(e) => setVarias(e.target.checked)} className="h-4 w-4" />
@@ -291,8 +328,21 @@ export default function EditorClave() {
             </li>
           ))}
         </ol>
-        <p className="text-center text-sm text-slate-500">Capturar la clave escaneando una hoja llegará en la Fase 3.</p>
+        <p className="text-center text-sm text-slate-500">
+          Tip: llena una hoja de respuestas con la clave y usa “Escanear hoja” para capturarla en segundos.
+        </p>
       </div>
+      {escaneando && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black">
+          <div className="flex items-center justify-between bg-blue-700 px-3 py-2.5 text-white">
+            <span className="text-sm font-semibold">Escanea la hoja con la clave · versión {version}</span>
+            <button onClick={() => setEscaneando(false)} className="rounded-lg bg-blue-600 px-3 py-1 text-sm">Cancelar</button>
+          </div>
+          <div className="relative flex-1">
+            <Scanner onCaptura={aplicarEscaneo} />
+          </div>
+        </div>
+      )}
     </Screen>
   );
 }

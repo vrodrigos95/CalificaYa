@@ -5,6 +5,9 @@ import EditorClave from './screens/EditorClave';
 import Hojas from './screens/Hojas';
 import Ajustes from './screens/Ajustes';
 import ProbarLector from './screens/ProbarLector';
+import NuevaSesion from './screens/NuevaSesion';
+import Escaneo from './screens/Escaneo';
+import Revision from './screens/Revision';
 
 // Hash router: funciona en cualquier hosting estático (Netlify, Hostinger) y sin internet.
 const router = createHashRouter([
@@ -15,6 +18,9 @@ const router = createHashRouter([
   { path: '/hojas', element: <Hojas /> },
   { path: '/ajustes', element: <Ajustes /> },
   { path: '/probar', element: <ProbarLector /> },
+  { path: '/sesion/nueva', element: <NuevaSesion /> },
+  { path: '/sesion/escanear', element: <Escaneo /> },
+  { path: '/sesion/revisar', element: <Revision /> },
 ]);
 
 export default function App() {

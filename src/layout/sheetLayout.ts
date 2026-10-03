@@ -275,3 +275,11 @@ export function allBubbles(l: SheetLayout): Bubble[] {
 export function markerCenters(l: SheetLayout) {
   return l.markers.map((m) => ({ x: m.x + m.size / 2, y: m.y + m.size / 2 }));
 }
+
+/** Rectángulo (mm) que abarca los marcadores, con un margen: lo útil de la hoja. */
+export function marcoHoja(l: SheetLayout, margen = 3) {
+  const xs = l.markers.flatMap((m) => [m.x, m.x + m.size]);
+  const ys = l.markers.flatMap((m) => [m.y, m.y + m.size]);
+  const x = Math.max(0, Math.min(...xs) - margen), y = Math.max(0, Math.min(...ys) - margen);
+  return { x, y, w: Math.min(PAGE_W, Math.max(...xs) + margen) - x, h: Math.min(PAGE_H, Math.max(...ys) + margen) - y };
+}
