@@ -1,4 +1,5 @@
 import { createHashRouter, RouterProvider } from 'react-router';
+import PuertaLicencia from './components/PuertaLicencia';
 import Inicio from './screens/Inicio';
 import Claves from './screens/Claves';
 import EditorClave from './screens/EditorClave';
@@ -26,5 +27,9 @@ const router = createHashRouter([
 ]);
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <PuertaLicencia>
+      <RouterProvider router={router} />
+    </PuertaLicencia>
+  );
 }

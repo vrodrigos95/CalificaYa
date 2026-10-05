@@ -47,6 +47,8 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 | `src/grading/` | Calificación de una hoja contra la clave |
 | `src/export/excel.ts` | Exportación a Excel (ExcelJS) con fórmulas |
 | `src/db/` | IndexedDB (Dexie): solo claves y licencia |
+| `src/license/gumroad.ts` | Único módulo que llama a la API de Gumroad |
+| `src/license/licenseService.ts` | Reglas: activación, límite, revalidación y gracia |
 | `src/session/` | Sesión de calificación y lista de alumnos (solo en memoria) |
 | `src/keys/keysJson.ts` | Importar / exportar claves en JSON |
 | `src/components/Scanner.tsx` | Cámara en vivo con captura automática |
@@ -61,7 +63,26 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 - [x] Fase 3: escaneo en vivo con cámara
 - [x] Fase 4: revisión y exportación a Excel
 - [x] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
-- [ ] Fase 6: licencia con Gumroad
+- [x] Fase 6: licencia con Gumroad
+
+## Licencia (Gumroad)
+
+- **Activar:** se consulta primero sin gastar un uso (si ya está en el máximo, se
+  rechaza sin gastar otro) y luego con `increment_uses_count=true`.
+- **Revalidar:** cada `VITE_DIAS_REVALIDACION` días (30) en segundo plano, sin gastar
+  usos. Reembolso, contracargo o licencia desactivada → la app vuelve a pedir licencia.
+  Sin internet o con Gumroad caído, quien ya estaba activado sigue usando la app.
+- **Gracia:** a los `VITE_DIAS_GRACIA` días (45) sin verificar, se pide conexión;
+  se puede “continuar esta vez” una sola vez por periodo.
+- **Desarrollo:** con `npm run dev` en `localhost` la licencia se omite; desde otra
+  dirección (p. ej. el celular con `dev:celular`) se acepta `PRUEBA-0000-0000-0000`.
+  La versión publicada no acepta ese código.
+- **Liberar un dispositivo (soporte):**
+  `GUMROAD_TOKEN=tu_token node scripts/liberar-uso.mjs <product_id> <licencia>`
+  (el token es tuyo: nunca va en la app ni en el repositorio).
+- Si el navegador bloqueara la llamada directa a Gumroad (CORS), activar la función
+  `netlify/functions/verificar-licencia.mjs` con
+  `VITE_LICENCIA_URL=/.netlify/functions/verificar-licencia`.
 
 ## Hojas de respuesta y licencia
 
