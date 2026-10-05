@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import Screen, { btn } from '../components/Screen';
+import CargarAlumnos from '../components/CargarAlumnos';
 import { listarClaves } from '../db/keysRepo';
 import { validarClave, type ClaveExamen } from '../keys/model';
 import { VERSIONES } from '../layout/sheetLayout';
@@ -8,7 +9,8 @@ import { useSesion } from '../session/sessionStore';
 
 export default function NuevaSesion() {
   const [claves, setClaves] = useState<ClaveExamen[] | null>(null);
-  const { sesion, iniciar } = useSesion();
+  const { sesion, iniciar, cargarAlumnos } = useSesion();
+  const [alumnos, setAlumnos] = useState<Map<string, string> | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => { listarClaves().then(setClaves); }, []);
@@ -17,6 +19,7 @@ export default function NuevaSesion() {
     if (sesion && sesion.hojas.length > 0 &&
       !confirm(`Hay una sesión abierta con ${sesion.hojas.length} hoja(s)${sesion.exportada ? '' : ' sin exportar'}. ¿Cerrarla y empezar otra? Sus datos se borrarán.`)) return;
     iniciar(c);
+    cargarAlumnos(alumnos);
     navigate('/sesion/escanear');
   }
 
@@ -30,7 +33,8 @@ export default function NuevaSesion() {
           Continuar sesión “{sesion.clave.nombre}” ({sesion.hojas.length} hojas)
         </Link>
       )}
-      <h2 className="mb-2 font-semibold text-slate-800">Elige la clave del examen</h2>
+      <div className="mb-5"><CargarAlumnos alumnos={alumnos} onCambio={setAlumnos} /></div>
+      <h2 className="mb-2 font-semibold text-slate-800">Elige la clave del examen para empezar</h2>
       {claves === null ? (
         <p className="text-slate-500">Cargando…</p>
       ) : listas.length === 0 ? (

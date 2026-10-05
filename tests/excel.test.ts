@@ -43,7 +43,7 @@ beforeAll(async () => {
   sesion = useSesion.getState().sesion!;
   mkdirSync('test-output', { recursive: true });
   archivo = `test-output/${nombreArchivo(clave.nombre, new Date(2026, 9, 5, 9, 7))}`;
-  writeFileSync(archivo, await construirExcel(sesion, { nombres: new Map([['219000001', 'Ana López'], ['219000003', 'Beto Ruiz']]) }, ExcelJS));
+  writeFileSync(archivo, await construirExcel(sesion, { nombres: new Map([['219000001', 'Ana López'], ['219000003', 'Beto Ruiz'], ['219000099', 'Zoe Pérez']]) }, ExcelJS));
 });
 
 describe('nombre del archivo', () => {
@@ -68,6 +68,8 @@ describe('Excel exportado', () => {
     expect(c100.formula).toContain('SUMIF(Clave!');
     expect((r.getCell('H2').value as ExcelJS.CellFormulaValue).formula).toContain('I2');
     expect(r.getCell('B2').value).toBe('Ana López');
+    // Alumno de la lista sin hoja → al final, "No presentó"
+    expect(r.getRow(r.rowCount).values).toEqual([undefined, '219000099', 'Zoe Pérez', 'No presentó']);
   });
 
   it('colorea las respuestas: verde correcta, rojo incorrecta, gris en blanco', async () => {

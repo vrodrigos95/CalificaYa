@@ -8,6 +8,7 @@ import { miniaturaJpeg } from '../lib/imagen';
 import { getLayout, marcoHoja } from '../layout/sheetLayout';
 import type { ReadResult } from '../omr/reader';
 import { useSesion, type HojaSesion } from '../session/sessionStore';
+import { buscarAlumno } from '../session/alumnos';
 
 interface Aviso { hoja: HojaSesion; duplicada: HojaSesion | null }
 
@@ -72,7 +73,10 @@ export default function Escaneo() {
               <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-xl">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm font-medium text-slate-500">Hoja #{aviso.hoja.numero}</span>
-                  <span className="text-sm text-slate-500">{aviso.hoja.codigo || 'sin código'}</span>
+                  <span className="text-right text-sm text-slate-500">
+                    {aviso.hoja.codigo || 'sin código'}
+                    {buscarAlumno(aviso.hoja.codigo, sesion.alumnos) && <span className="block text-xs">{buscarAlumno(aviso.hoja.codigo, sesion.alumnos)!.nombre}</span>}
+                  </span>
                 </div>
                 <div className={`my-2 text-center text-6xl font-bold ${cal === null ? 'text-slate-400' : 'text-blue-700'}`} data-testid="calificacion">
                   {cal ?? '—'}

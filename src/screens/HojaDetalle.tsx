@@ -7,6 +7,7 @@ import { useGuardSesion } from '../hooks/useGuardSesion';
 import { opcionesDe } from '../keys/model';
 import { getLayout, LETRAS } from '../layout/sheetLayout';
 import { avisosHoja, codigosRepetidos, useSesion } from '../session/sessionStore';
+import { buscarAlumno } from '../session/alumnos';
 
 type Filtro = 'todas' | 'revisar';
 
@@ -39,7 +40,8 @@ export default function HojaDetalle() {
   const avisos = avisosHoja(hoja, codigosRepetidos(sesion.hojas));
   const layout = getLayout(hoja.lectura.formato);
   const opciones = opcionesDe(clave.numOpciones).length;
-  const nombre = hoja.codigo ? sesion.alumnos?.get(hoja.codigo) : undefined;
+  const alumno = buscarAlumno(hoja.codigo, sesion.alumnos);
+  const nombre = alumno ? `${alumno.nombre}${alumno.codigo !== hoja.codigo ? ` (${alumno.codigo})` : ''}` : undefined;
 
   // Tocar en la imagen: una sola respuesta (tocar la misma la borra).
   function tocarImagen(q: number, o: number) {
@@ -102,7 +104,7 @@ export default function HojaDetalle() {
               placeholder={layout.id.length ? 'Sin código' : 'Hoja sin código: escribe uno'}
               className={`w-full rounded-xl border px-3 py-2 font-mono text-lg ${codigo.includes('?') || (!codigo && layout.id.length) ? 'border-amber-400 bg-amber-50' : 'border-slate-300'}`}
             />
-            {nombre && <p className="mt-1 text-sm text-slate-600">{nombre}</p>}
+            {nombre ? <p className="mt-1 text-sm text-slate-600">{nombre}</p> : sesion.alumnos && hoja.codigo && !hoja.codigo.includes('?') ? <p className="mt-1 text-sm text-amber-700">No está en la lista de alumnos</p> : null}
           </div>
           <div>
             <span className="mb-1 block text-sm font-semibold text-slate-700">Versión</span>

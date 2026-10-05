@@ -54,6 +54,8 @@ interface Estado {
   /** Cambia la clave de la sesión (p. ej. tras corregirla) y recalifica todas las hojas. */
   actualizarClave: (clave: ClaveExamen) => void;
   marcarExportada: () => void;
+  /** Carga (o quita, con null) la lista de alumnos de la sesión. */
+  cargarAlumnos: (alumnos: Map<string, string> | null) => void;
   cerrar: () => void;
 }
 
@@ -129,6 +131,11 @@ export const useSesion = create<Estado>((set, get) => ({
     if (!s) return;
     const hojas = s.hojas.map((h) => ({ ...h, resultado: calificar(h.respuestas, clave) }));
     set({ sesion: { ...s, clave, hojas, exportada: false } });
+  },
+
+  cargarAlumnos: (alumnos) => {
+    const s = get().sesion;
+    if (s) set({ sesion: { ...s, alumnos: alumnos?.size ? alumnos : null, exportada: s.hojas.length === 0 } });
   },
 
   marcarExportada: () => {

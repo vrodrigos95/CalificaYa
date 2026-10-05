@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import Screen, { btn } from '../components/Screen';
+import CargarAlumnos from '../components/CargarAlumnos';
+import { buscarAlumno } from '../session/alumnos';
 import { useExportar } from '../hooks/useExportar';
 import { useGuardSesion } from '../hooks/useGuardSesion';
 import { avisosHoja, codigosRepetidos, useSesion } from '../session/sessionStore';
@@ -10,6 +12,8 @@ export default function Revision() {
   const sesion = useSesion((s) => s.sesion);
   const borrarHoja = useSesion((s) => s.borrarHoja);
   const cerrar = useSesion((s) => s.cerrar);
+  const cargarAlumnos = useSesion((s) => s.cargarAlumnos);
+  const [verLista, setVerLista] = useState(false);
   const navigate = useNavigate();
   const { exportar, exportando } = useExportar();
   const [soloAvisos, setSoloAvisos] = useState(false);
@@ -20,6 +24,8 @@ export default function Revision() {
   const visibles = soloAvisos ? conAvisos.filter((x) => x.avisos.length) : conAvisos;
   const totalAvisos = conAvisos.filter((x) => x.avisos.length).length;
   const cals = hojas.map((h) => (clave.escala === 10 ? h.resultado.calificacion10 : h.resultado.calificacion100)).filter((c): c is number => c !== null);
+  const presentes = new Set(hojas.map((h) => buscarAlumno(h.codigo, sesion.alumnos)?.codigo).filter(Boolean));
+  const faltantes = sesion.alumnos ? [...sesion.alumnos].filter(([c]) => !presentes.has(c)) : [];
   const promedio = cals.length ? Math.round((cals.reduce((a, b) => a + b, 0) / cals.length) * 10) / 10 : null;
 
   function cerrarSesion() {
@@ -47,19 +53,30 @@ export default function Revision() {
         <div className="rounded-xl bg-white p-2 shadow-sm"><div className="text-xl font-bold">{promedio ?? '—'}</div><div className="text-xs text-slate-500">promedio</div></div>
         <div className={`rounded-xl p-2 shadow-sm ${totalAvisos ? 'bg-amber-50' : 'bg-white'}`}><div className="text-xl font-bold">{totalAvisos}</div><div className="text-xs text-slate-500">con avisos</div></div>
       </div>
+      {sesion.alumnos && faltantes.length > 0 && (
+        <details className="mb-3 rounded-xl bg-slate-100 p-3 text-sm">
+          <summary className="cursor-pointer font-medium text-slate-700">{faltantes.length} alumno(s) de la lista sin hoja escaneada</summary>
+          <ul className="mt-2 max-h-40 overflow-auto text-slate-600">{faltantes.map(([c, n]) => <li key={c}><span className="font-mono">{c}</span> · {n}</li>)}</ul>
+        </details>
+      )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={soloAvisos} onChange={(e) => setSoloAvisos(e.target.checked)} className="h-4 w-4" />
           Solo hojas con avisos
         </label>
-        <Link to={`/claves/${clave.id}?volver=/sesion/revisar`} className={btn.small}>Corregir la clave</Link>
+        <div className="flex gap-2">
+          <button onClick={() => setVerLista((v) => !v)} className={btn.small}>Lista de alumnos</button>
+          <Link to={`/claves/${clave.id}?volver=/sesion/revisar`} className={btn.small}>Corregir la clave</Link>
+        </div>
       </div>
 
+      {verLista && <div className="mb-3"><CargarAlumnos alumnos={sesion.alumnos} onCambio={cargarAlumnos} /></div>}
       {hojas.length === 0 && <p className="mt-8 text-center text-slate-500">Aún no hay hojas. Regresa a escanear.</p>}
       <ul className="space-y-2">
         {visibles.map(({ h, avisos }) => {
           const cal = clave.escala === 10 ? h.resultado.calificacion10 : h.resultado.calificacion100;
-          const nombre = h.codigo ? sesion.alumnos?.get(h.codigo) : undefined;
+          const alumno = buscarAlumno(h.codigo, sesion.alumnos);
+          const nombre = alumno?.nombre;
           return (
             <li key={h.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
               <Link to={`/sesion/revisar/${h.id}`} className="flex min-w-0 flex-1 items-center gap-3">

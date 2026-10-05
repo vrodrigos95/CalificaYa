@@ -22,6 +22,15 @@ npm run icons      # regenera los íconos provisionales de public/icons
 npx tsx scripts/omr-try.ts 50 1   # lee una hoja sintética y guarda test-output/foto.png y hoja.png
 ```
 
+## Publicar (Netlify)
+
+1. En Netlify: *Add new site → Import an existing project* y elige este repositorio.
+2. `netlify.toml` ya indica el comando (`npm run build`) y la carpeta (`dist`).
+3. Agrega las variables de `.env.example` en *Site configuration → Environment variables*.
+
+Netlify da HTTPS automáticamente, necesario para la cámara y para instalar la app.
+La primera visita descarga ~15 MB (OpenCV); después la app funciona sin internet.
+
 ## Configuración
 
 Copia `.env.example` a `.env`. Todos los valores configurables se leen
@@ -38,7 +47,8 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 | `src/grading/` | Calificación de una hoja contra la clave |
 | `src/export/excel.ts` | Exportación a Excel (ExcelJS) con fórmulas |
 | `src/db/` | IndexedDB (Dexie): solo claves y licencia |
-| `src/session/` | Sesión de calificación (solo en memoria) |
+| `src/session/` | Sesión de calificación y lista de alumnos (solo en memoria) |
+| `src/keys/keysJson.ts` | Importar / exportar claves en JSON |
 | `src/components/Scanner.tsx` | Cámara en vivo con captura automática |
 | `src/screens/` | Pantallas de la app |
 | `tests/` | Pruebas con Vitest; `tests/synthetic/` genera fotos sintéticas |
@@ -50,7 +60,7 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 - [x] Fase 2: motor OMR probado con imágenes sintéticas
 - [x] Fase 3: escaneo en vivo con cámara
 - [x] Fase 4: revisión y exportación a Excel
-- [ ] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
+- [x] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
 - [ ] Fase 6: licencia con Gumroad
 
 ## Hojas de respuesta y licencia

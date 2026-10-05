@@ -11,7 +11,8 @@ import type ExcelJSNS from 'exceljs';
 import JSZip from 'jszip';
 import { APP_NAME } from '../config';
 import { VERSIONES } from '../layout/sheetLayout';
-import type { Sesion } from '../session/sessionStore';
+import { buscarAlumno } from '../session/alumnos';
+import type { HojaSesion, Sesion } from '../session/sessionStore';
 
 type ExcelJS = typeof ExcelJSNS;
 type Worksheet = ExcelJSNS.Worksheet;
@@ -79,10 +80,16 @@ function pintar(cell: ExcelJSNS.Cell, c: { fill: string; font: string }) {
   cell.font = { color: { argb: c.font } };
 }
 
+/** Código y nombre a mostrar: si el código coincide con la lista, se usa el de la lista. */
+function identidad(h: HojaSesion, nombres?: Map<string, string>) {
+  const a = buscarAlumno(h.codigo, nombres);
+  return { codigo: a?.codigo ?? (h.codigo || `Hoja ${h.numero}`), nombre: a?.nombre ?? '' };
+}
+
 function ordenarHojas(s: Sesion, nombres?: Map<string, string>) {
   return [...s.hojas].sort((a, b) => {
     if (nombres?.size) {
-      const na = nombres.get(a.codigo) ?? '￿', nb = nombres.get(b.codigo) ?? '￿';
+      const na = identidad(a, nombres).nombre || '\uffff', nb = identidad(b, nombres).nombre || '\uffff';
       if (na !== nb) return na.localeCompare(nb, 'es');
     }
     if (!a.codigo !== !b.codigo) return a.codigo ? -1 : 1;
@@ -125,9 +132,10 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
     const pm = puntosMax(r.version);
     const cal100 = r.version && pm > 0 ? redondear((r.puntos / pm) * 100) : null;
     if (cal100 !== null) calificaciones.push(cal100);
+    const ident = identidad(h, o.nombres);
     const fila = wsR.addRow([
-      h.codigo || `Hoja ${h.numero}`,
-      ...(conNombre ? [o.nombres!.get(h.codigo) ?? ''] : []),
+      ident.codigo,
+      ...(conNombre ? [ident.nombre] : []),
       r.version ?? '',
       r.aciertos,
       r.errores,
@@ -140,7 +148,16 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
     fila.getCell(c100).numFmt = '0.00';
     if (!h.codigo || h.codigo.includes('?')) pintar(fila.getCell(1), ROJO);
   });
-  wsR.autoFilter = { from: 'A1', to: `${col(titulosR.length)}${Math.max(1, ultimaFila)}` };
+  // Alumnos de la lista sin hoja escaneada (no presentaron)
+  if (conNombre) {
+    const presentes = new Set(hojas.map((h) => identidad(h, o.nombres).codigo));
+    const faltantes = [...o.nombres!].filter(([c]) => !presentes.has(c)).sort((a, b) => a[1].localeCompare(b[1], 'es'));
+    for (const [c, nom] of faltantes) {
+      const fila = wsR.addRow([c, nom, 'No presentó']);
+      fila.font = { color: { argb: 'FF808080' }, italic: true };
+    }
+  }
+  wsR.autoFilter = { from: 'A1', to: `${col(titulosR.length)}${Math.max(1, wsR.rowCount)}` };
   ajustarColumnas(wsR, 9);
 
   // ------------------------------------------------------------------ Respuestas
@@ -148,9 +165,10 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
   const fijas = ['Código', ...(conNombre ? ['Nombre'] : []), 'Versión'];
   encabezado(wsA, [...fijas, ...Array.from({ length: n }, (_, q) => `P${q + 1}`)]);
   hojas.forEach((h) => {
+    const ident = identidad(h, o.nombres);
     const fila = wsA.addRow([
-      h.codigo || `Hoja ${h.numero}`,
-      ...(conNombre ? [o.nombres!.get(h.codigo) ?? ''] : []),
+      ident.codigo,
+      ...(conNombre ? [ident.nombre] : []),
       h.resultado.version ?? '',
       ...h.resultado.preguntas.map((p) => (p.marcadas.length ? p.marcadas.join(',') : null)),
     ]);
