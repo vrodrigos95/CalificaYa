@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router';
 import Scanner from '../components/Scanner';
 import { textoAlerta } from '../grading/grade';
 import { useGuardSesion } from '../hooks/useGuardSesion';
+import { useExportar } from '../hooks/useExportar';
 import { miniaturaJpeg } from '../lib/imagen';
 import { getLayout, marcoHoja } from '../layout/sheetLayout';
 import type { ReadResult } from '../omr/reader';
@@ -18,6 +19,7 @@ export default function Escaneo() {
   const agregarHoja = useSesion((s) => s.agregarHoja);
   const borrarHoja = useSesion((s) => s.borrarHoja);
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  const { exportar, exportando } = useExportar();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cerrarAviso = useCallback(() => {
@@ -58,7 +60,9 @@ export default function Escaneo() {
           <div className="text-xs text-blue-100" data-testid="contador">{hojas.length} hoja{hojas.length === 1 ? '' : 's'} escaneada{hojas.length === 1 ? '' : 's'}</div>
         </div>
         <Link to="/sesion/revisar" className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold">Revisar</Link>
-        <Link to="/sesion/revisar?exportar=1" className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-blue-800">Exportar Excel</Link>
+        <button onClick={exportar} disabled={exportando || hojas.length === 0} className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-blue-800 disabled:opacity-60">
+          {exportando ? 'Generando…' : 'Exportar Excel'}
+        </button>
       </header>
 
       <div className="relative flex-1">

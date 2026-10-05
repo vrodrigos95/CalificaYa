@@ -66,3 +66,44 @@ describe('sesión en memoria', () => {
     expect(await db.claves.count()).toBe(0);
   });
 });
+
+describe('correcciones en la revisión', () => {
+  it('corregir una respuesta recalifica y queda registrada', () => {
+    useSesion.getState().iniciar(clave);
+    const { hoja } = useSesion.getState().agregarHoja(lectura('111', [0, null, 2]), null);
+    expect(hoja.resultado.calificacion100).toBe(75);
+    useSesion.getState().corregir(hoja.id, { pregunta: 1, marcadas: [1] });
+    const h = useSesion.getState().sesion!.hojas[0];
+    expect(h.resultado).toMatchObject({ aciertos: 3, calificacion100: 100 });
+    expect(h.editadas.preguntas).toEqual([1]);
+    expect(h.respuestas.preguntas[1]).toEqual({ marcadas: [1], estado: 'ok' });
+    // Dos opciones = doble marca (cuenta como error)
+    useSesion.getState().corregir(hoja.id, { pregunta: 0, marcadas: [0, 3] });
+    expect(useSesion.getState().sesion!.hojas[0].resultado.preguntas[0].estado).toBe('doble');
+  });
+
+  it('corregir el código y la versión', () => {
+    const c2 = structuredClone(clave);
+    c2.versiones.B = [{ correctas: ['C'], puntos: 1 }, { correctas: ['C'], puntos: 1 }, { correctas: ['C'], puntos: 1 }];
+    useSesion.getState().iniciar(c2);
+    const { hoja } = useSesion.getState().agregarHoja(lectura('12?4', [2, 2, 2]), null);
+    expect(hoja.resultado.version).toBe('A');
+    useSesion.getState().corregir(hoja.id, { codigo: ' 1234 ', version: 1 });
+    const h = useSesion.getState().sesion!.hojas[0];
+    expect(h.codigo).toBe('1234');
+    expect(h.resultado).toMatchObject({ version: 'B', aciertos: 3, calificacion100: 100 });
+  });
+
+  it('cambiar la clave recalifica todas las hojas', () => {
+    useSesion.getState().iniciar(clave);
+    useSesion.getState().agregarHoja(lectura('1', [0, 1, 2]), null);
+    useSesion.getState().agregarHoja(lectura('2', [0, 1, 1]), null);
+    useSesion.getState().marcarExportada();
+    const corregida = structuredClone(clave);
+    corregida.versiones.A![2] = { correctas: ['B', 'C'], puntos: 2 }; // se aceptan B y C en la 3
+    useSesion.getState().actualizarClave(corregida);
+    const s = useSesion.getState().sesion!;
+    expect(s.hojas.map((h) => h.resultado.calificacion100)).toEqual([100, 100]);
+    expect(s.exportada).toBe(false);
+  });
+});

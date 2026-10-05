@@ -12,7 +12,8 @@ export function useGuardSesion() {
   useBeforeUnload(pendiente);
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      pendiente && currentLocation.pathname !== nextLocation.pathname && !nextLocation.pathname.startsWith('/sesion'),
+      pendiente && currentLocation.pathname !== nextLocation.pathname &&
+      !nextLocation.pathname.startsWith('/sesion') && !nextLocation.pathname.startsWith('/claves/'),
   );
   useEffect(() => {
     if (blocker.state !== 'blocked') return;

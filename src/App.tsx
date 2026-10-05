@@ -8,6 +8,7 @@ import ProbarLector from './screens/ProbarLector';
 import NuevaSesion from './screens/NuevaSesion';
 import Escaneo from './screens/Escaneo';
 import Revision from './screens/Revision';
+import HojaDetalle from './screens/HojaDetalle';
 
 // Hash router: funciona en cualquier hosting estático (Netlify, Hostinger) y sin internet.
 const router = createHashRouter([
@@ -21,6 +22,7 @@ const router = createHashRouter([
   { path: '/sesion/nueva', element: <NuevaSesion /> },
   { path: '/sesion/escanear', element: <Escaneo /> },
   { path: '/sesion/revisar', element: <Revision /> },
+  { path: '/sesion/revisar/:id', element: <HojaDetalle /> },
 ]);
 
 export default function App() {

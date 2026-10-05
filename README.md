@@ -14,7 +14,8 @@ dispositivo; solo se guardan las claves de examen y el estado de la licencia.
 npm install
 npm run dev        # servidor de desarrollo en http://localhost:5173
 npm run dev:celular  # igual, con HTTPS y visible en la red local (la cámara del celular exige HTTPS)
-npm test           # pruebas automáticas (genera PDFs de muestra en test-output/)
+npm test           # pruebas automáticas (genera PDFs y un Excel de muestra en test-output/;
+                   # si hay LibreOffice instalado, también recalcula y verifica las fórmulas)
 npm run build      # compilación para producción en dist/
 npm run preview    # sirve dist/ en http://localhost:4173
 npm run icons      # regenera los íconos provisionales de public/icons
@@ -35,6 +36,7 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 | `src/keys/` | Modelo de datos de las claves de examen |
 | `src/omr/` | Motor OMR (OpenCV.js en Web Worker) |
 | `src/grading/` | Calificación de una hoja contra la clave |
+| `src/export/excel.ts` | Exportación a Excel (ExcelJS) con fórmulas |
 | `src/db/` | IndexedDB (Dexie): solo claves y licencia |
 | `src/session/` | Sesión de calificación (solo en memoria) |
 | `src/components/Scanner.tsx` | Cámara en vivo con captura automática |
@@ -47,7 +49,7 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 - [x] Fase 1: generador de hojas en PDF + gestión de claves
 - [x] Fase 2: motor OMR probado con imágenes sintéticas
 - [x] Fase 3: escaneo en vivo con cámara
-- [ ] Fase 4: revisión y exportación a Excel
+- [x] Fase 4: revisión y exportación a Excel
 - [ ] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
 - [ ] Fase 6: licencia con Gumroad
 

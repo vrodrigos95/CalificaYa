@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useBlocker, useNavigate, useParams } from 'react-router';
+import { useBlocker, useNavigate, useParams, useSearchParams } from 'react-router';
+import { useSesion } from '../session/sessionStore';
 import Screen, { btn } from '../components/Screen';
 import { guardarClave, obtenerClave } from '../db/keysRepo';
 import {
@@ -22,6 +23,9 @@ import { useBeforeUnload } from '../hooks/useBeforeUnload';
 export default function EditorClave() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // Al corregir la clave desde la revisión: al guardar se recalifica la sesión y se regresa.
+  const volver = params.get('volver');
   const [clave, setClave] = useState<ClaveExamen | null>(id ? null : nuevaClave());
   const [noExiste, setNoExiste] = useState(false);
   const [sucio, setSucio] = useState(false);
@@ -167,7 +171,9 @@ export default function EditorClave() {
       if (!id) navigate(`/claves/${clave!.id}`, { replace: true });
       return;
     }
-    navigate('/claves');
+    const sesion = useSesion.getState().sesion;
+    if (sesion && sesion.clave.id === clave!.id) useSesion.getState().actualizarClave(clave!);
+    navigate(volver?.startsWith('/sesion') ? volver : '/claves');
   }
 
   const capturadas = reactivos.filter((r) => r.correctas.length > 0).length;
@@ -175,7 +181,7 @@ export default function EditorClave() {
   return (
     <Screen
       title={id ? 'Editar clave' : 'Nueva clave'}
-      back="/claves"
+      back={volver?.startsWith('/sesion') ? volver : '/claves'}
       footer={
         <div className="space-y-2">
           {errores.length > 0 && (
