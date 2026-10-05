@@ -4,6 +4,10 @@ PWA para calificar exámenes de opción múltiple con la cámara del celular
 (hojas de burbujas) y exportar los resultados a Excel. Todo se procesa en el
 dispositivo; solo se guardan las claves de examen y el estado de la licencia.
 
+> 👩‍🏫 **¿Eres docente y quieres usar la app?** Lee la guía paso a paso: **[COMO_USAR.md](COMO_USAR.md)**.
+>
+> Lo que sigue es información técnica para desarrollo.
+
 ## Requisitos
 
 - Node.js 20 o superior
