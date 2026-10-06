@@ -7,7 +7,7 @@ import { useGuardSesion } from '../hooks/useGuardSesion';
 import { opcionesDe } from '../keys/model';
 import { getLayout, LETRAS } from '../layout/sheetLayout';
 import { avisosHoja, codigosRepetidos, useSesion } from '../session/sessionStore';
-import { buscarAlumno } from '../session/alumnos';
+import { coincidencias, identificador } from '../session/alumnos';
 
 type Filtro = 'todas' | 'revisar';
 
@@ -37,11 +37,16 @@ export default function HojaDetalle() {
   const anterior = sesion.hojas[idx - 1], siguiente = sesion.hojas[idx + 1];
   const res = hoja.resultado;
   const cal = clave.escala === 10 ? res.calificacion10 : res.calificacion100;
-  const avisos = avisosHoja(hoja, codigosRepetidos(sesion.hojas));
+  const avisos = avisosHoja(hoja, codigosRepetidos(sesion.hojas, sesion.alumnos));
   const layout = getLayout(hoja.lectura.formato);
   const opciones = opcionesDe(clave.numOpciones).length;
-  const alumno = buscarAlumno(hoja.codigo, sesion.alumnos);
-  const nombre = alumno ? `${alumno.nombre}${alumno.codigo !== hoja.codigo ? ` (${alumno.codigo})` : ''}` : undefined;
+  const encontrados = coincidencias(hoja.codigo, sesion.alumnos);
+  const alumno = encontrados.length === 1 ? encontrados[0] : null;
+  const nombre = alumno
+    ? [alumno.lista && `No. ${alumno.lista}`, alumno.completo, alumno.codigo && alumno.codigo !== hoja.codigo && alumno.codigo].filter(Boolean).join(' · ')
+    : undefined;
+  // Con lista de alumnos se puede escribir el código, el número de lista o el nombre.
+  const conLista = !!sesion.alumnos;
 
   // Tocar en la imagen: una sola respuesta (tocar la misma la borra).
   function tocarImagen(q: number, o: number) {
@@ -53,8 +58,8 @@ export default function HojaDetalle() {
     const actual = hoja!.respuestas.preguntas[q]?.marcadas ?? [];
     corregir(hoja!.id, { pregunta: q, marcadas: actual.includes(o) ? actual.filter((x) => x !== o) : [...actual, o] });
   }
-  function guardarCodigo() {
-    if (codigo.trim() !== hoja!.codigo) corregir(hoja!.id, { codigo: codigo.trim() });
+  function guardarCodigo(valor = codigo) {
+    if (valor.trim() !== hoja!.codigo) corregir(hoja!.id, { codigo: valor.trim() });
   }
 
   const preguntas = res.preguntas.map((p, q) => ({ p, q, lectura: hoja.respuestas.preguntas[q] }));
@@ -87,24 +92,42 @@ export default function HojaDetalle() {
         {(avisos.length > 0 || res.alertas.length > 0) && (
           <ul className="space-y-1 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
             {res.alertas.map((a, i) => <li key={i}>⚠️ {textoAlerta(a)}</li>)}
-            {avisos.filter((a) => a.startsWith('Código')).map((a) => <li key={a}>⚠️ {a}</li>)}
+            {avisos.filter((a) => a.startsWith('Código') || a.startsWith('Alumno')).map((a) => <li key={a}>⚠️ {a}</li>)}
           </ul>
         )}
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
           <div>
-            <label htmlFor="codigo" className="mb-1 block text-sm font-semibold text-slate-700">Código de alumno</label>
+            <label htmlFor="codigo" className="mb-1 block text-sm font-semibold text-slate-700">{conLista || !layout.id.length ? 'Alumno' : 'Código de alumno'}</label>
             <input
               id="codigo"
               value={codigo}
-              inputMode="numeric"
+              inputMode={layout.id.length && !conLista ? 'numeric' : 'text'}
+              autoComplete="off"
               onChange={(e) => setCodigo(e.target.value)}
-              onBlur={guardarCodigo}
+              onBlur={() => guardarCodigo()}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              placeholder={layout.id.length ? 'Sin código' : 'Hoja sin código: escribe uno'}
-              className={`w-full rounded-xl border px-3 py-2 font-mono text-lg ${codigo.includes('?') || (!codigo && layout.id.length) ? 'border-amber-400 bg-amber-50' : 'border-slate-300'}`}
+              placeholder={conLista ? 'Código, No. de lista, nombre o apellido' : layout.id.length ? 'Sin código' : 'Hoja sin código: escribe uno'}
+              className={`w-full rounded-xl border px-3 py-2 text-lg ${layout.id.length && !conLista ? 'font-mono' : ''} ${codigo.includes('?') || (!codigo && layout.id.length) ? 'border-amber-400 bg-amber-50' : 'border-slate-300'}`}
             />
-            {nombre ? <p className="mt-1 text-sm text-slate-600">{nombre}</p> : sesion.alumnos && hoja.codigo && !hoja.codigo.includes('?') ? <p className="mt-1 text-sm text-amber-700">No está en la lista de alumnos</p> : null}
+            {nombre ? (
+              <p className="mt-1 text-sm text-slate-600">✓ {nombre}</p>
+            ) : encontrados.length > 1 ? (
+              <div className="mt-1 text-sm text-amber-800">
+                Coincide con {encontrados.length} alumnos, elige uno:
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {encontrados.slice(0, 8).map((a) => (
+                    <button key={a.id} onClick={() => { const v = identificador(a); setCodigo(v); guardarCodigo(v); }}
+                      className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-900">
+                      {a.lista && `${a.lista}. `}{a.completo || a.codigo}
+                    </button>
+                  ))}
+                  {encontrados.length > 8 && <span className="text-xs">… escribe más para acotar</span>}
+                </div>
+              </div>
+            ) : conLista && hoja.codigo && !hoja.codigo.includes('?') ? (
+              <p className="mt-1 text-sm text-amber-700">No está en la lista de alumnos</p>
+            ) : null}
           </div>
           <div>
             <span className="mb-1 block text-sm font-semibold text-slate-700">Versión</span>

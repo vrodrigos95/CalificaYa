@@ -11,15 +11,15 @@ import type ExcelJSNS from 'exceljs';
 import JSZip from 'jszip';
 import { APP_NAME } from '../config';
 import { VERSIONES } from '../layout/sheetLayout';
-import { buscarAlumno } from '../session/alumnos';
+import { buscarAlumno, type Alumno } from '../session/alumnos';
 import type { HojaSesion, Sesion } from '../session/sessionStore';
 
 type ExcelJS = typeof ExcelJSNS;
 type Worksheet = ExcelJSNS.Worksheet;
 
 export interface OpcionesExcel {
-  /** Nombres por código (lista opcional de la sesión). */
-  nombres?: Map<string, string>;
+  /** Lista opcional de alumnos de la sesión. */
+  nombres?: Alumno[];
   fecha?: Date;
 }
 
@@ -80,16 +80,22 @@ function pintar(cell: ExcelJSNS.Cell, c: { fill: string; font: string }) {
   cell.font = { color: { argb: c.font } };
 }
 
-/** Código y nombre a mostrar: si el código coincide con la lista, se usa el de la lista. */
-function identidad(h: HojaSesion, nombres?: Map<string, string>) {
+/** Datos a mostrar: si lo escrito en la hoja coincide con un alumno de la lista, se usan los de la lista. */
+function identidad(h: HojaSesion, nombres?: Alumno[]) {
   const a = buscarAlumno(h.codigo, nombres);
-  return { codigo: a?.codigo ?? (h.codigo || `Hoja ${h.numero}`), nombre: a?.nombre ?? '' };
+  if (a) return { id: a.id, lista: a.lista, codigo: a.codigo, nombre: a.completo };
+  return { id: '', lista: '', codigo: h.codigo || `Hoja ${h.numero}`, nombre: '' };
 }
 
-function ordenarHojas(s: Sesion, nombres?: Map<string, string>) {
+const numLista = (l: string) => (l ? Number(l) : Infinity);
+
+function ordenarHojas(s: Sesion, nombres?: Alumno[]) {
+  const porLista = !!nombres?.some((a) => a.lista);
   return [...s.hojas].sort((a, b) => {
-    if (nombres?.size) {
-      const na = identidad(a, nombres).nombre || '\uffff', nb = identidad(b, nombres).nombre || '\uffff';
+    if (nombres?.length) {
+      const ia = identidad(a, nombres), ib = identidad(b, nombres);
+      if (porLista && numLista(ia.lista) !== numLista(ib.lista)) return numLista(ia.lista) - numLista(ib.lista);
+      const na = ia.nombre || '\uffff', nb = ib.nombre || '\uffff';
       if (na !== nb) return na.localeCompare(nb, 'es');
     }
     if (!a.codigo !== !b.codigo) return a.codigo ? -1 : 1;
@@ -101,7 +107,14 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
   const ExcelJS = excel ?? ((await import('exceljs')) as unknown as { default: ExcelJS }).default;
   const { clave } = s;
   const n = clave.numPreguntas;
-  const conNombre = !!o.nombres?.size;
+  const conNombre = !!o.nombres?.length;
+  const conLista = !!o.nombres?.some((a) => a.lista);
+  const colsAlumno = [...(conLista ? ['No. lista'] : []), 'Código', ...(conNombre ? ['Nombre'] : [])];
+  const datosAlumno = (i: ReturnType<typeof identidad>) => [
+    ...(conLista ? [i.lista ? Number(i.lista) : ''] : []),
+    i.codigo,
+    ...(conNombre ? [i.nombre] : []),
+  ];
   const hojas = ordenarHojas(s, o.nombres);
   const ultimaFila = hojas.length + 1;
   const fecha = o.fecha ?? new Date();
@@ -121,7 +134,7 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
 
   // ------------------------------------------------------------------ Resultados
   const wsR = wb.addWorksheet('Resultados');
-  const titulosR = ['Código', ...(conNombre ? ['Nombre'] : []), 'Versión', 'Aciertos', 'Errores', 'En blanco', 'Puntos', 'Calificación (0–10)', 'Calificación (0–100)'];
+  const titulosR = [...colsAlumno, 'Versión', 'Aciertos', 'Errores', 'En blanco', 'Puntos', 'Calificación (0–10)', 'Calificación (0–100)'];
   encabezado(wsR, titulosR);
   const cR = (t: string) => col(titulosR.indexOf(t) + 1);
   const [cVer, cPts, c10, c100] = [cR('Versión'), cR('Puntos'), cR('Calificación (0–10)'), cR('Calificación (0–100)')];
@@ -134,8 +147,7 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
     if (cal100 !== null) calificaciones.push(cal100);
     const ident = identidad(h, o.nombres);
     const fila = wsR.addRow([
-      ident.codigo,
-      ...(conNombre ? [ident.nombre] : []),
+      ...datosAlumno(ident),
       r.version ?? '',
       r.aciertos,
       r.errores,
@@ -146,14 +158,15 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
     ]);
     fila.getCell(c10).numFmt = '0.00';
     fila.getCell(c100).numFmt = '0.00';
-    if (!h.codigo || h.codigo.includes('?')) pintar(fila.getCell(1), ROJO);
+    if (!ident.id && (!h.codigo || h.codigo.includes('?'))) pintar(fila.getCell(cR('Código')), ROJO);
   });
   // Alumnos de la lista sin hoja escaneada (no presentaron)
   if (conNombre) {
-    const presentes = new Set(hojas.map((h) => identidad(h, o.nombres).codigo));
-    const faltantes = [...o.nombres!].filter(([c]) => !presentes.has(c)).sort((a, b) => a[1].localeCompare(b[1], 'es'));
-    for (const [c, nom] of faltantes) {
-      const fila = wsR.addRow([c, nom, 'No presentó']);
+    const presentes = new Set(hojas.map((h) => identidad(h, o.nombres).id));
+    const faltantes = o.nombres!.filter((a) => !presentes.has(a.id))
+      .sort((a, b) => (conLista && numLista(a.lista) !== numLista(b.lista) ? numLista(a.lista) - numLista(b.lista) : a.completo.localeCompare(b.completo, 'es')));
+    for (const a of faltantes) {
+      const fila = wsR.addRow([...datosAlumno({ id: a.id, lista: a.lista, codigo: a.codigo, nombre: a.completo }), 'No presentó']);
       fila.font = { color: { argb: 'FF808080' }, italic: true };
     }
   }
@@ -162,13 +175,12 @@ export async function construirExcel(s: Sesion, o: OpcionesExcel = {}, excel?: E
 
   // ------------------------------------------------------------------ Respuestas
   const wsA = wb.addWorksheet('Respuestas');
-  const fijas = ['Código', ...(conNombre ? ['Nombre'] : []), 'Versión'];
+  const fijas = [...colsAlumno, 'Versión'];
   encabezado(wsA, [...fijas, ...Array.from({ length: n }, (_, q) => `P${q + 1}`)]);
   hojas.forEach((h) => {
     const ident = identidad(h, o.nombres);
     const fila = wsA.addRow([
-      ident.codigo,
-      ...(conNombre ? [ident.nombre] : []),
+      ...datosAlumno(ident),
       h.resultado.version ?? '',
       ...h.resultado.preguntas.map((p) => (p.marcadas.length ? p.marcadas.join(',') : null)),
     ]);

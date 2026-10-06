@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/db/db';
 import { nuevaClave } from '../src/keys/model';
 import type { MarkRead } from '../src/omr/classify';
-import { haySinExportar, useSesion, type LecturaSesion } from '../src/session/sessionStore';
+import { avisosHoja, codigosRepetidos, haySinExportar, useSesion, type LecturaSesion } from '../src/session/sessionStore';
+import { interpretarFilas } from '../src/session/alumnos';
 
 const fila = (o: number | null): MarkRead => ({ marcadas: o === null ? [] : [o], estado: o === null ? 'blanco' : 'ok', scores: [] });
 
@@ -105,5 +106,23 @@ describe('correcciones en la revisión', () => {
     const s = useSesion.getState().sesion!;
     expect(s.hojas.map((h) => h.resultado.calificacion100)).toEqual([100, 100]);
     expect(s.exportada).toBe(false);
+  });
+});
+
+describe('alumno repetido con lista', () => {
+  it('detecta al mismo alumno escrito de dos formas (código y nombre)', () => {
+    const alumnos = interpretarFilas([['No. de lista', 'Nombre', 'Apellidos', 'Código'], ['1', 'Ana', 'López', '219000001'], ['2', 'Beto', 'Ruiz', '219000002']]).alumnos;
+    const s = useSesion.getState();
+    s.iniciar(clave);
+    s.agregarHoja(lectura('219000001', [0, 1, 2]), null);
+    s.agregarHoja(lectura('', [0, 1, 2]), null);
+    s.agregarHoja(lectura('2', [0, 1, 2]), null);
+    const [h1, h2, h3] = useSesion.getState().sesion!.hojas;
+    useSesion.getState().corregir(h2.id, { codigo: 'ana lopez' });
+    const hojas = useSesion.getState().sesion!.hojas;
+    const rep = codigosRepetidos(hojas, alumnos);
+    expect([...rep].sort()).toEqual([h1.id, h2.id].sort());
+    expect(avisosHoja(hojas[0], rep)).toContain('Alumno repetido');
+    expect(avisosHoja(hojas.find((h) => h.id === h3.id)!, rep)).not.toContain('Alumno repetido');
   });
 });

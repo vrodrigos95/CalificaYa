@@ -6,6 +6,7 @@ import { calificar, type Respuestas, type ResultadoHoja } from '../grading/grade
 import type { MarkRead } from '../omr/classify';
 import type { ClaveExamen } from '../keys/model';
 import type { ReadResult } from '../omr/reader';
+import { buscarAlumno, type Alumno } from './alumnos';
 
 /** Lectura sin la imagen completa (solo se conserva la miniatura). */
 export type LecturaSesion = Omit<ReadResult, 'hoja'>;
@@ -39,8 +40,8 @@ export interface Sesion {
   iniciada: Date;
   /** true si no hay cambios desde la última exportación. */
   exportada: boolean;
-  /** Lista opcional de alumnos (código → nombre). Solo para esta sesión. */
-  alumnos: Map<string, string> | null;
+  /** Lista opcional de alumnos. Solo para esta sesión. */
+  alumnos: Alumno[] | null;
   siguiente: number;
 }
 
@@ -55,7 +56,7 @@ interface Estado {
   actualizarClave: (clave: ClaveExamen) => void;
   marcarExportada: () => void;
   /** Carga (o quita, con null) la lista de alumnos de la sesión. */
-  cargarAlumnos: (alumnos: Map<string, string> | null) => void;
+  cargarAlumnos: (alumnos: Alumno[] | null) => void;
   cerrar: () => void;
 }
 
@@ -135,7 +136,7 @@ export const useSesion = create<Estado>((set, get) => ({
 
   cargarAlumnos: (alumnos) => {
     const s = get().sesion;
-    if (s) set({ sesion: { ...s, alumnos: alumnos?.size ? alumnos : null, exportada: s.hojas.length === 0 } });
+    if (s) set({ sesion: { ...s, alumnos: alumnos?.length ? alumnos : null, exportada: s.hojas.length === 0 } });
   },
 
   marcarExportada: () => {
@@ -159,7 +160,7 @@ export function haySinExportar(s: Sesion | null): boolean {
 export function avisosHoja(h: HojaSesion, repetidos: Set<string>): string[] {
   const a: string[] = [];
   if (h.lectura.formato !== 20 && (!h.codigo || h.codigo.includes('?'))) a.push('Código incompleto');
-  if (h.codigo && repetidos.has(h.codigo)) a.push('Código repetido');
+  if (h.codigo && repetidos.has(h.id)) a.push('Alumno repetido');
   for (const al of h.resultado.alertas) {
     if (al.tipo === 'version-sin-marcar') a.push('Sin versión');
     else if (al.tipo === 'version-doble') a.push('Versión doble');
@@ -172,9 +173,13 @@ export function avisosHoja(h: HojaSesion, repetidos: Set<string>): string[] {
   return a;
 }
 
-/** Códigos que aparecen en más de una hoja. */
-export function codigosRepetidos(hojas: HojaSesion[]): Set<string> {
-  const vistos = new Set<string>(), rep = new Set<string>();
-  for (const h of hojas) if (h.codigo) (vistos.has(h.codigo) ? rep : vistos).add(h.codigo);
-  return rep;
+/** Hojas (ids) cuyo alumno aparece en más de una hoja: mismo código o, con lista, el mismo alumno. */
+export function codigosRepetidos(hojas: HojaSesion[], alumnos?: Alumno[] | null): Set<string> {
+  const porAlumno = new Map<string, string[]>();
+  for (const h of hojas) {
+    if (!h.codigo) continue;
+    const k = buscarAlumno(h.codigo, alumnos)?.id ?? h.codigo;
+    porAlumno.set(k, [...(porAlumno.get(k) ?? []), h.id]);
+  }
+  return new Set([...porAlumno.values()].filter((ids) => ids.length > 1).flat());
 }
