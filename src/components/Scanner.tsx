@@ -8,12 +8,14 @@ import type { RawImage, ReadFailure, ReadResult } from '../omr/reader';
 //
 // Cada cuadro se manda al Web Worker (uno a la vez, así un celular lento solo
 // lee menos cuadros por segundo pero nunca se congela). La hoja se captura sola
-// cuando DOS lecturas seguidas coinciden por completo (mismo formato, código,
-// versión y respuestas): eso garantiza que la hoja está quieta y legible.
+// cuando dos lecturas seguidas coinciden por completo (mismo formato, código,
+// versión y respuestas) Y la imagen está nítida. Mientras la hoja está quieta se
+// guarda el cuadro más nítido; si ninguno llega a NITIDEZ_BUENA, tras
+// ESPERA_MAX_MS se usa el mejor, siempre que no esté borroso (NITIDEZ_MIN).
 // Después de capturar, no se vuelve a capturar la misma hoja hasta que se retira
 // (varios cuadros sin hoja) o aparece una hoja distinta.
 
-export type EstadoScanner = 'iniciando' | 'buscando' | 'detectada' | 'retirar' | 'pausado' | 'sin-camara';
+export type EstadoScanner = 'iniciando' | 'buscando' | 'detectada' | 'enfocando' | 'borrosa' | 'retirar' | 'pausado' | 'sin-camara';
 
 interface Props {
   onCaptura: (lectura: ReadResult) => void;
@@ -23,10 +25,16 @@ interface Props {
   children?: ReactNode;
 }
 
-const LADO_MAX = 1280;
+const LADO_MAX = 1920;
 const CONFIANZA_MIN = 0.9;
 const ERROR_MAX_MM = 2.5;
 const FALLOS_PARA_RETIRO = 3;
+// Nitidez (varianza del laplaciano de la hoja enderezada, ver reader.ts).
+// Calibrada con hojas sintéticas: enfocada ≈ 90–190, algo suave ≈ 40–100,
+// movida o desenfocada < 25.
+const NITIDEZ_BUENA = 60;
+const NITIDEZ_MIN = 25;
+const ESPERA_MAX_MS = 2000;
 
 export function firmaLectura(r: ReadResult): string {
   return [r.formato, r.id.texto, r.version.marcadas.join(''), r.preguntas.map((p) => p.marcadas.join('')).join(',')].join('|');
@@ -36,6 +44,8 @@ const MENSAJE: Record<EstadoScanner, string> = {
   iniciando: 'Preparando cámara y lector…',
   buscando: 'Encuadra la hoja completa: que se vean los cuadros negros de las esquinas',
   detectada: 'Hoja detectada — mantén el celular quieto',
+  enfocando: 'Enfocando… mantén el celular quieto',
+  borrosa: 'La imagen sale borrosa: mantén el celular quieto, con buena luz y a unos 30–40 cm',
   retirar: 'Listo. Coloca la siguiente hoja',
   pausado: '',
   'sin-camara': 'No se pudo abrir la cámara. Puedes usar una foto.',
@@ -89,6 +99,9 @@ export default function Scanner({ onCaptura, pausado = false, formatos, children
     let previa: string | null = null;
     let capturada: string | null = null;
     let fallos = 0;
+    // Cuadro más nítido de la hoja quieta actual y desde cuándo está quieta.
+    let mejor: ReadResult | null = null;
+    let quietaDesde = 0;
 
     function tomarCuadro(video: HTMLVideoElement): { img: RawImage; escala: number } {
       const escala = Math.min(1, LADO_MAX / Math.max(video.videoWidth, video.videoHeight));
@@ -122,6 +135,7 @@ export default function Scanner({ onCaptura, pausado = false, formatos, children
         const buena = r.ok && r.confianza >= CONFIANZA_MIN && r.errorMarcadores <= ERROR_MAX_MM;
         if (!buena) {
           previa = null;
+          mejor = null;
           if (++fallos >= FALLOS_PARA_RETIRO) capturada = null;
           setEstado(capturada ? 'retirar' : 'buscando');
           dibujarMarcadores(r, escala, r.ok ? '#facc15' : '#f87171');
@@ -135,14 +149,26 @@ export default function Scanner({ onCaptura, pausado = false, formatos, children
           setEstado('retirar');
           dibujarMarcadores(ok, escala, '#94a3b8');
         } else if (previa === firma) {
-          dibujarMarcadores(ok, escala, '#22c55e');
-          capturada = firma;
-          previa = null;
-          navigator.vibrate?.(60);
-          onCapturaRef.current(ok);
+          if (!mejor || ok.nitidez > mejor.nitidez) mejor = ok;
+          ultimaOk.current = mejor;
+          const esperado = performance.now() - quietaDesde >= ESPERA_MAX_MS;
+          if (mejor.nitidez >= NITIDEZ_BUENA || (esperado && mejor.nitidez >= NITIDEZ_MIN)) {
+            dibujarMarcadores(ok, escala, '#22c55e');
+            const captura = mejor;
+            capturada = firma;
+            previa = null;
+            mejor = null;
+            navigator.vibrate?.(60);
+            onCapturaRef.current(captura);
+          } else {
+            setEstado(esperado ? 'borrosa' : 'enfocando');
+            dibujarMarcadores(ok, escala, '#facc15');
+          }
         } else {
           previa = firma;
           capturada = null;
+          mejor = ok;
+          quietaDesde = performance.now();
           setEstado('detectada');
           dibujarMarcadores(ok, escala, '#facc15');
         }
@@ -162,6 +188,11 @@ export default function Scanner({ onCaptura, pausado = false, formatos, children
         return;
       }
       if (detenido) { stream.getTracks().forEach((t) => t.stop()); return; }
+      // Enfoque continuo donde el navegador lo permite (Chrome en Android).
+      const pista = stream.getVideoTracks()[0];
+      const caps = (pista?.getCapabilities?.() ?? {}) as { focusMode?: string[] };
+      if (caps.focusMode?.includes('continuous'))
+        await pista.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] }).catch(() => undefined);
       const video = videoRef.current!;
       video.srcObject = stream;
       await video.play().catch(() => undefined);
@@ -198,7 +229,7 @@ export default function Scanner({ onCaptura, pausado = false, formatos, children
   }
 
   const mensaje = pausado ? '' : MENSAJE[estado];
-  const colorGuia = estado === 'detectada' ? 'border-yellow-400' : estado === 'retirar' ? 'border-green-400' : 'border-white/70';
+  const colorGuia = estado === 'detectada' || estado === 'enfocando' || estado === 'borrosa' ? 'border-yellow-400' : estado === 'retirar' ? 'border-green-400' : 'border-white/70';
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-black">
@@ -228,7 +259,7 @@ export default function Scanner({ onCaptura, pausado = false, formatos, children
         </label>
         <button
           onClick={capturarManual}
-          disabled={estado !== 'detectada' && estado !== 'retirar'}
+          disabled={estado !== 'detectada' && estado !== 'enfocando' && estado !== 'borrosa' && estado !== 'retirar'}
           className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-slate-900 shadow disabled:opacity-40"
           aria-label="Capturar ahora"
         >

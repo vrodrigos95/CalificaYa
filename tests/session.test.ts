@@ -10,7 +10,7 @@ const fila = (o: number | null): MarkRead => ({ marcadas: o === null ? [] : [o],
 
 function lectura(codigo: string, respuestas: (number | null)[]): LecturaSesion {
   return {
-    ok: true, formato: 50, rotacion: 0, confianza: 1, errorMarcadores: 0, marcadores: [],
+    ok: true, formato: 50, rotacion: 0, confianza: 1, errorMarcadores: 0, nitidez: 100, marcadores: [],
     calibracion: { vacia: 0, llena: 1, umbral: 0.4, tenue: 0.2 },
     preguntas: respuestas.map(fila),
     version: fila(0),

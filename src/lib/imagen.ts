@@ -20,8 +20,9 @@ export async function archivoAImagen(file: Blob, maxLado = 2000): Promise<RawIma
 export function miniaturaJpeg(
   hoja: { data: Uint8Array; width: number; height: number },
   recorte = { x: 0, y: 0, w: hoja.width, h: hoja.height },
-  ancho = 560,
-  calidad = 0.72,
+  // A la resolución de la hoja enderezada (≈ 5 px/mm), para que se lea lo escrito a mano.
+  ancho = Math.min(1100, Math.round(recorte.w)),
+  calidad = 0.85,
 ): Promise<Blob | null> {
   const src = document.createElement('canvas');
   src.width = hoja.width;
