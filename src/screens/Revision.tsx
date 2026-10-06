@@ -19,13 +19,13 @@ export default function Revision() {
   const [soloAvisos, setSoloAvisos] = useState(false);
   if (!sesion) return <Navigate to="/sesion/nueva" replace />;
   const { clave, hojas } = sesion;
-  const repetidos = codigosRepetidos(hojas);
+  const repetidos = codigosRepetidos(hojas, sesion.alumnos);
   const conAvisos = hojas.map((h) => ({ h, avisos: avisosHoja(h, repetidos) }));
   const visibles = soloAvisos ? conAvisos.filter((x) => x.avisos.length) : conAvisos;
   const totalAvisos = conAvisos.filter((x) => x.avisos.length).length;
   const cals = hojas.map((h) => (clave.escala === 10 ? h.resultado.calificacion10 : h.resultado.calificacion100)).filter((c): c is number => c !== null);
-  const presentes = new Set(hojas.map((h) => buscarAlumno(h.codigo, sesion.alumnos)?.codigo).filter(Boolean));
-  const faltantes = sesion.alumnos ? [...sesion.alumnos].filter(([c]) => !presentes.has(c)) : [];
+  const presentes = new Set(hojas.map((h) => buscarAlumno(h.codigo, sesion.alumnos)?.id).filter(Boolean));
+  const faltantes = sesion.alumnos ? sesion.alumnos.filter((a) => !presentes.has(a.id)) : [];
   const promedio = cals.length ? Math.round((cals.reduce((a, b) => a + b, 0) / cals.length) * 10) / 10 : null;
 
   function cerrarSesion() {
@@ -56,7 +56,7 @@ export default function Revision() {
       {sesion.alumnos && faltantes.length > 0 && (
         <details className="mb-3 rounded-xl bg-slate-100 p-3 text-sm">
           <summary className="cursor-pointer font-medium text-slate-700">{faltantes.length} alumno(s) de la lista sin hoja escaneada</summary>
-          <ul className="mt-2 max-h-40 overflow-auto text-slate-600">{faltantes.map(([c, n]) => <li key={c}><span className="font-mono">{c}</span> · {n}</li>)}</ul>
+          <ul className="mt-2 max-h-40 overflow-auto text-slate-600">{faltantes.map((a) => <li key={a.id}>{a.lista && <span className="font-mono">{a.lista}. </span>}{a.completo || a.codigo}{a.codigo && a.completo && <span className="font-mono text-slate-400"> · {a.codigo}</span>}</li>)}</ul>
         </details>
       )}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -76,14 +76,14 @@ export default function Revision() {
         {visibles.map(({ h, avisos }) => {
           const cal = clave.escala === 10 ? h.resultado.calificacion10 : h.resultado.calificacion100;
           const alumno = buscarAlumno(h.codigo, sesion.alumnos);
-          const nombre = alumno?.nombre;
+          const nombre = alumno?.completo;
           return (
             <li key={h.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
               <Link to={`/sesion/revisar/${h.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 {h.miniatura ? <img src={h.miniatura} alt="" className="h-20 w-16 shrink-0 rounded object-cover object-top" /> : <div className="h-20 w-16 shrink-0 rounded bg-slate-100" />}
                 <div className="min-w-0 flex-1">
                   <div className="text-xs text-slate-500">Hoja #{h.numero}{h.editadas.preguntas.length || h.editadas.codigo || h.editadas.version ? ' · ✏️ corregida' : ''}</div>
-                  <div className="truncate font-semibold text-slate-900">{h.codigo || 'Sin código'}</div>
+                  <div className="truncate font-semibold text-slate-900">{h.codigo || (h.lectura.formato === 20 ? 'Sin alumno' : 'Sin código')}</div>
                   {nombre && <div className="truncate text-sm text-slate-600">{nombre}</div>}
                   <div className="text-sm text-slate-600">{h.resultado.aciertos}/{clave.numPreguntas} correctas</div>
                   {avisos.length > 0 && (

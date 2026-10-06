@@ -6,11 +6,12 @@ import { listarClaves } from '../db/keysRepo';
 import { validarClave, type ClaveExamen } from '../keys/model';
 import { VERSIONES } from '../layout/sheetLayout';
 import { useSesion } from '../session/sessionStore';
+import type { Alumno } from '../session/alumnos';
 
 export default function NuevaSesion() {
   const [claves, setClaves] = useState<ClaveExamen[] | null>(null);
   const { sesion, iniciar, cargarAlumnos } = useSesion();
-  const [alumnos, setAlumnos] = useState<Map<string, string> | null>(null);
+  const [alumnos, setAlumnos] = useState<Alumno[] | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => { listarClaves().then(setClaves); }, []);

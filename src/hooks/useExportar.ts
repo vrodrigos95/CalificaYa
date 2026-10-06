@@ -13,7 +13,7 @@ export function useExportar() {
   async function exportar() {
     const s = useSesion.getState().sesion;
     if (!s || s.hojas.length === 0) { alert('Aún no hay hojas escaneadas.'); return; }
-    const rep = codigosRepetidos(s.hojas);
+    const rep = codigosRepetidos(s.hojas, s.alumnos);
     const conAvisos = s.hojas.filter((h) => avisosHoja(h, rep).length > 0).length;
     if (conAvisos && !confirm(`${conAvisos} hoja(s) tienen avisos sin revisar (código, versión o marcas dudosas). ¿Exportar de todos modos?`)) return;
     setExportando(true);

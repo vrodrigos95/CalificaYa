@@ -75,7 +75,7 @@ export default function Escaneo() {
                   <span className="text-sm font-medium text-slate-500">Hoja #{aviso.hoja.numero}</span>
                   <span className="text-right text-sm text-slate-500">
                     {aviso.hoja.codigo || 'sin código'}
-                    {buscarAlumno(aviso.hoja.codigo, sesion.alumnos) && <span className="block text-xs">{buscarAlumno(aviso.hoja.codigo, sesion.alumnos)!.nombre}</span>}
+                    {buscarAlumno(aviso.hoja.codigo, sesion.alumnos) && <span className="block text-xs">{buscarAlumno(aviso.hoja.codigo, sesion.alumnos)!.completo}</span>}
                   </span>
                 </div>
                 <div className={`my-2 text-center text-6xl font-bold ${cal === null ? 'text-slate-400' : 'text-blue-700'}`} data-testid="calificacion">

@@ -8,6 +8,7 @@ import { construirExcel, nombreArchivo } from '../src/export/excel';
 import { nuevaClave } from '../src/keys/model';
 import type { MarkRead } from '../src/omr/classify';
 import { useSesion, type LecturaSesion, type Sesion } from '../src/session/sessionStore';
+import { interpretarFilas } from '../src/session/alumnos';
 
 const fila = (o: number[]): MarkRead => ({ marcadas: o, estado: o.length === 0 ? 'blanco' : o.length === 1 ? 'ok' : 'doble', scores: [] });
 function lectura(codigo: string, resp: number[][], version = 0): LecturaSesion {
@@ -43,7 +44,7 @@ beforeAll(async () => {
   sesion = useSesion.getState().sesion!;
   mkdirSync('test-output', { recursive: true });
   archivo = `test-output/${nombreArchivo(clave.nombre, new Date(2026, 9, 5, 9, 7))}`;
-  writeFileSync(archivo, await construirExcel(sesion, { nombres: new Map([['219000001', 'Ana López'], ['219000003', 'Beto Ruiz'], ['219000099', 'Zoe Pérez']]) }, ExcelJS));
+  writeFileSync(archivo, await construirExcel(sesion, { nombres: interpretarFilas([['Código', 'Nombre'], ['219000001', 'Ana López'], ['219000003', 'Beto Ruiz'], ['219000099', 'Zoe Pérez']]).alumnos }, ExcelJS));
 });
 
 describe('nombre del archivo', () => {
@@ -139,5 +140,23 @@ describe('Excel exportado', () => {
     expect(n.getCell('C2').value).toBe(3);
     expect((n.getCell('D2').value as ExcelJS.CellFormulaValue).result).toBeCloseTo(0.75);
     expect((n as unknown as { conditionalFormattings: { ref: string }[] }).conditionalFormattings[0].ref).toBe('A2:J6');
+  });
+});
+
+describe('Excel con lista de la plantilla (No. de lista)', () => {
+  it('agrega la columna «No. lista» y ordena por número de lista', async () => {
+    const alumnos = interpretarFilas([
+      ['No. de lista', 'Nombre', 'Apellidos', 'Código'],
+      ['1', 'Beto', 'Ruiz', '219000003'],
+      ['2', 'Ana', 'López', '219000001'],
+      ['3', 'Zoe', 'Pérez', ''],
+    ]).alumnos;
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await construirExcel(sesion, { nombres: alumnos }, ExcelJS) as unknown as ArrayBuffer);
+    const r = wb.getWorksheet('Resultados')!;
+    expect((r.getRow(1).values as string[]).slice(1, 5)).toEqual(['No. lista', 'Código', 'Nombre', 'Versión']);
+    expect((r.getRow(2).values as unknown[]).slice(1, 4)).toEqual([1, '219000003', 'Beto Ruiz']);
+    expect((r.getRow(3).values as unknown[]).slice(1, 4)).toEqual([2, '219000001', 'Ana López']);
+    expect((r.getRow(r.rowCount).values as unknown[]).slice(1)).toEqual([3, '', 'Zoe Pérez', 'No presentó']);
   });
 });
