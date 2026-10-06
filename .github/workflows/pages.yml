@@ -1,10 +1,10 @@
-# Publica CalificaYa en GitHub Pages cada vez que se actualiza la rama main.
-# En GitHub: Settings → Pages → Source: "GitHub Actions".
+# Publica CalificaYa en GitHub Pages (alternativa a Netlify). Solo corre a mano:
+# Actions → "Publicar en GitHub Pages" → Run workflow.
+# Requiere Settings → Pages → Source: "GitHub Actions".
+# Para publicar en cada cambio de main, agrega:  push: { branches: [main] }
 name: Publicar en GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -32,6 +32,7 @@ npx tsx scripts/omr-try.ts 50 1   # lee una hoja sintética y guarda test-output
 1. En Netlify: *Add new site → Import an existing project* y elige este repositorio.
 2. `netlify.toml` ya indica el comando (`npm run build`) y la carpeta (`dist`).
 3. Agrega las variables de `.env.example` en *Site configuration → Environment variables*.
+   Opcional: `VITE_CODIGO_MAESTRO` (código personal para usar la app sin Gumroad mientras lo configuras).
 
 Netlify da HTTPS automáticamente, necesario para la cámara y para instalar la app.
 La primera visita descarga ~15 MB (OpenCV); después la app funciona sin internet.
@@ -40,8 +41,8 @@ La primera visita descarga ~15 MB (OpenCV); después la app funciona sin interne
 
 1. Fusiona a `main`.
 2. *Settings → Pages → Source:* **GitHub Actions** (no “Deploy from a branch”: la app se
-   tiene que compilar). El flujo `.github/workflows/pages.yml` compila y publica en cada
-   cambio de `main`, en `https://<usuario>.github.io/CalificaYa/`.
+   tiene que compilar). El flujo `.github/workflows/pages.yml` compila y publica (se lanza a mano desde
+   *Actions → Publicar en GitHub Pages → Run workflow*) en `https://<usuario>.github.io/CalificaYa/`.
 3. Opcional, en *Settings → Secrets and variables → Actions*:
    - **Variables:** `VITE_GUMROAD_PRODUCT_ID`, `VITE_GUMROAD_PURCHASE_URL`, `VITE_SUPPORT_EMAIL`.
    - **Secret** `CODIGO_MAESTRO`: un código personal que activa la app sin Gumroad (para
