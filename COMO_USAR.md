@@ -7,6 +7,8 @@ calificaciones.
 
 No necesitas saber de computación. Sigue los pasos en orden.
 
+📄 **Versión para imprimir o compartir, con imágenes:** [Guia_CalificaYa.pdf](docs/Guia_CalificaYa.pdf)
+
 ---
 
 ## Lo que necesitas

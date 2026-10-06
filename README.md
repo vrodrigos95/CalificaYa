@@ -4,7 +4,7 @@ PWA para calificar exámenes de opción múltiple con la cámara del celular
 (hojas de burbujas) y exportar los resultados a Excel. Todo se procesa en el
 dispositivo; solo se guardan las claves de examen y el estado de la licencia.
 
-> 👩‍🏫 **¿Eres docente y quieres usar la app?** Lee la guía paso a paso: **[COMO_USAR.md](COMO_USAR.md)**.
+> 👩‍🏫 **¿Eres docente y quieres usar la app?** Lee la guía paso a paso: **[COMO_USAR.md](COMO_USAR.md)** o el PDF con imágenes **[docs/Guia_CalificaYa.pdf](docs/Guia_CalificaYa.pdf)**.
 >
 > Lo que sigue es información técnica para desarrollo.
 
@@ -23,6 +23,7 @@ npm test           # pruebas automáticas (genera PDFs y un Excel de muestra en 
 npm run build      # compilación para producción en dist/
 npm run preview    # sirve dist/ en http://localhost:4173
 npm run icons      # regenera los íconos provisionales de public/icons
+node scripts/guia-pdf.cjs        # regenera docs/Guia_CalificaYa.pdf desde docs/guia/guia.html
 npx tsx scripts/omr-try.ts 50 1   # lee una hoja sintética y guarda test-output/foto.png y hoja.png
 ```
 
