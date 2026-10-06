@@ -11,7 +11,8 @@ const deps: svc.Dependencias = {
   repo: repoLicencia,
   config,
   // El código de prueba solo existe en `npm run dev`; la versión publicada no lo acepta.
-  codigoPrueba: config.desarrollo ? LICENCIA_DE_PRUEBA : undefined,
+  // En la versión publicada solo se acepta el código maestro, si se configuró.
+  codigoPrueba: (config.desarrollo ? LICENCIA_DE_PRUEBA : config.codigoMaestro)?.toUpperCase(),
 };
 
 /** En desarrollo y en localhost, la licencia se omite por completo. */

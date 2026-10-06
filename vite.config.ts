@@ -7,6 +7,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // `--mode celular` activa HTTPS con un certificado local: en el celular la cámara
 // solo funciona en páginas seguras (HTTPS).
 export default defineConfig(({ mode }) => ({
+  // GitHub Pages publica en /<repositorio>/ (lo define el flujo .github/workflows/pages.yml).
+  base: process.env.VITE_BASE || '/',
   plugins: [
     react(),
     tailwindcss(),

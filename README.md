@@ -35,6 +35,17 @@ npx tsx scripts/omr-try.ts 50 1   # lee una hoja sintética y guarda test-output
 Netlify da HTTPS automáticamente, necesario para la cámara y para instalar la app.
 La primera visita descarga ~15 MB (OpenCV); después la app funciona sin internet.
 
+## Publicar (GitHub Pages)
+
+1. Fusiona a `main`.
+2. *Settings → Pages → Source:* **GitHub Actions** (no “Deploy from a branch”: la app se
+   tiene que compilar). El flujo `.github/workflows/pages.yml` compila y publica en cada
+   cambio de `main`, en `https://<usuario>.github.io/CalificaYa/`.
+3. Opcional, en *Settings → Secrets and variables → Actions*:
+   - **Variables:** `VITE_GUMROAD_PRODUCT_ID`, `VITE_GUMROAD_PURCHASE_URL`, `VITE_SUPPORT_EMAIL`.
+   - **Secret** `CODIGO_MAESTRO`: un código personal que activa la app sin Gumroad (para
+     usarla tú mientras configuras Gumroad). Queda dentro del código publicado: no lo compartas.
+
 ## Configuración
 
 Copia `.env.example` a `.env`. Todos los valores configurables se leen

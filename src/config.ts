@@ -30,6 +30,12 @@ export const config = {
   maxActivaciones: num(env.VITE_MAX_ACTIVACIONES, 3),
   diasRevalidacion: num(env.VITE_DIAS_REVALIDACION, 30),
   diasGracia: num(env.VITE_DIAS_GRACIA, 45),
+  /**
+   * Código personal que activa la app sin Gumroad (opcional, se define al
+   * compilar). Útil para usarla tú mismo antes de configurar Gumroad.
+   * Ojo: queda dentro del código publicado; no lo compartas.
+   */
+  codigoMaestro: env.VITE_CODIGO_MAESTRO?.trim() || undefined,
   /** true en `npm run dev`; nunca en la versión publicada. */
   desarrollo: !!env.DEV,
 } as const;

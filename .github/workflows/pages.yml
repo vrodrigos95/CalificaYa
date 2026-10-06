@@ -1,0 +1,48 @@
+# Publica CalificaYa en GitHub Pages cada vez que se actualiza la rama main.
+# En GitHub: Settings → Pages → Source: "GitHub Actions".
+name: Publicar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compilar
+        run: npm run build
+        env:
+          # La app vive en https://<usuario>.github.io/<repositorio>/
+          VITE_BASE: /${{ github.event.repository.name }}/
+          # Valores de Gumroad (Settings → Secrets and variables → Actions → Variables)
+          VITE_GUMROAD_PRODUCT_ID: ${{ vars.VITE_GUMROAD_PRODUCT_ID }}
+          VITE_GUMROAD_PURCHASE_URL: ${{ vars.VITE_GUMROAD_PURCHASE_URL }}
+          VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL }}
+          # Código personal para usar la app sin Gumroad (Secrets). Opcional.
+          VITE_CODIGO_MAESTRO: ${{ secrets.CODIGO_MAESTRO }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
