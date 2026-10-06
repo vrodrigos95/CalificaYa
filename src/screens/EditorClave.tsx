@@ -89,18 +89,26 @@ export default function EditorClave() {
     actualizar({ ...clave!, versiones });
   }
 
-  function cambiarNumPreguntas(texto: string) {
-    setNumTexto(texto);
-    const n = Number(texto);
-    if (!Number.isInteger(n) || n < 1 || n > MAX_PREGUNTAS || n === clave!.numPreguntas) return;
-    if (n < clave!.numPreguntas) {
-      const pierde = versionesActivas.some((v) => clave!.versiones[v]!.slice(n).some((r) => r.correctas.length > 0));
-      if (pierde && !confirm(`Se borrarán las respuestas de las preguntas ${n + 1} a ${clave!.numPreguntas}. ¿Continuar?`)) {
-        setNumTexto(String(clave!.numPreguntas));
-        return;
+  /** Aplica el número escrito en «Preguntas» (al salir del campo, con Enter o al guardar).
+   *  No se aplica en cada tecla: al borrar «20» para escribir «12» pasaría por «2»
+   *  y pediría borrar las respuestas 3 a 20. Devuelve la clave resultante. */
+  function aplicarNumPreguntas(): ClaveExamen {
+    const c = clave!;
+    const n = Number(numTexto);
+    if (!Number.isInteger(n) || n < 1 || n > MAX_PREGUNTAS || n === c.numPreguntas) {
+      setNumTexto(String(c.numPreguntas));
+      return c;
+    }
+    if (n < c.numPreguntas) {
+      const pierde = versionesActivas.some((v) => c.versiones[v]!.slice(n).some((r) => r.correctas.length > 0));
+      if (pierde && !confirm(`Se borrarán las respuestas de las preguntas ${n + 1} a ${c.numPreguntas}. ¿Continuar?`)) {
+        setNumTexto(String(c.numPreguntas));
+        return c;
       }
     }
-    actualizar(redimensionar(clave!, n, clave!.numOpciones));
+    const nueva = redimensionar(c, n, c.numOpciones);
+    actualizar(nueva);
+    return nueva;
   }
 
   function cambiarOpciones(n: 4 | 5) {
@@ -140,6 +148,14 @@ export default function EditorClave() {
     let c = clave!;
     if (ultima > c.numPreguntas && confirm(`La hoja tiene respuestas hasta la pregunta ${ultima}. ¿Cambiar el examen a ${ultima} preguntas?`))
       c = redimensionar(c, ultima, c.numOpciones);
+    // Examen más corto que la hoja (p. ej. 12 preguntas en la hoja de 20): ofrece recortarlo,
+    // solo si ninguna otra versión tiene respuestas después de la última marcada.
+    else if (
+      ultima < c.numPreguntas &&
+      versionesActivas.every((v) => v === version || c.versiones[v]!.slice(ultima).every((x) => x.correctas.length === 0)) &&
+      confirm(`La hoja tiene respuestas solo hasta la pregunta ${ultima}. ¿Cambiar el examen a ${ultima} preguntas?`)
+    )
+      c = redimensionar(c, ultima, c.numOpciones);
     const validas = opcionesDe(c.numOpciones);
     const rs = (c.versiones[version] ?? reactivosVacios(c.numPreguntas)).map((reac, i) => {
       const marcadas = (r.preguntas[i]?.marcadas ?? []).map((o) => LETRAS[o] as Opcion).filter((o) => validas.includes(o));
@@ -158,21 +174,22 @@ export default function EditorClave() {
   }
 
   async function guardar() {
-    const errs = validarClave(clave!);
-    if (!clave!.nombre.trim()) {
+    const clave = aplicarNumPreguntas();
+    const errs = validarClave(clave);
+    if (!clave.nombre.trim()) {
       setErrores(errs);
       return;
     }
-    await guardarClave(clave!);
+    await guardarClave(clave);
     sucioRef.current = false;
     setSucio(false);
     if (errs.length) {
       setErrores(['Guardada, pero aún no se puede usar para calificar:', ...errs]);
-      if (!id) navigate(`/claves/${clave!.id}`, { replace: true });
+      if (!id) navigate(`/claves/${clave.id}`, { replace: true });
       return;
     }
     const sesion = useSesion.getState().sesion;
-    if (sesion && sesion.clave.id === clave!.id) useSesion.getState().actualizarClave(clave!);
+    if (sesion && sesion.clave.id === clave.id) useSesion.getState().actualizarClave(clave);
     navigate(volver?.startsWith('/sesion') ? volver : '/claves');
   }
 
@@ -215,8 +232,9 @@ export default function EditorClave() {
               min={1}
               max={MAX_PREGUNTAS}
               value={numTexto}
-              onChange={(e) => cambiarNumPreguntas(e.target.value)}
-              onBlur={() => setNumTexto(String(clave.numPreguntas))}
+              onChange={(e) => setNumTexto(e.target.value)}
+              onBlur={aplicarNumPreguntas}
+              onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
               className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-base"
             />
           </div>
