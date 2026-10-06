@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+test-output
+*.log
+*.tsbuildinfo
+public/opencv/

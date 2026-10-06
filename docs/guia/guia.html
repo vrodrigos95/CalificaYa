@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>CalificaYa – Guía rápida para docentes</title>
+<style>
+  @page { size: letter; margin: 0.55in 0.6in 0.6in; }
+  :root { --azul: #1d4ed8; --azul-claro: #eff6ff; --tinta: #0f172a; --gris: #475569; --borde: #e2e8f0; --ambar: #fef3c7; --ambar-tinta: #78350f; --verde: #dcfce7; --verde-tinta: #14532d; }
+  * { box-sizing: border-box; }
+  body { font-family: "Liberation Sans", "DejaVu Sans", Arial, sans-serif; color: var(--tinta); font-size: 12.5pt; line-height: 1.45; margin: 0; }
+  h1, h2, h3 { margin: 0; line-height: 1.2; }
+  .pagina { page-break-after: always; }
+  .pagina:last-child { page-break-after: auto; }
+
+  /* Portada */
+  .portada { height: 9.6in; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .logo { width: 1.5in; height: 1.5in; }
+  .portada h1 { font-size: 40pt; margin-top: 0.25in; color: var(--tinta); }
+  .portada .sub { font-size: 17pt; color: var(--azul); font-weight: bold; margin-top: 0.08in; }
+  .portada .lema { font-size: 13pt; color: var(--gris); margin-top: 0.15in; max-width: 5.2in; }
+  .ruta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.12in; margin-top: 0.5in; width: 100%; }
+  .ruta div { background: var(--azul-claro); border-radius: 12px; padding: 0.12in 0.08in; font-size: 11pt; }
+  .ruta b { display: block; font-size: 20pt; color: var(--azul); }
+  .necesitas { margin-top: 0.45in; text-align: left; background: #f8fafc; border: 1px solid var(--borde); border-radius: 14px; padding: 0.18in 0.25in; width: 100%; }
+  .necesitas h3 { font-size: 13pt; margin-bottom: 0.06in; }
+  .necesitas ul { margin: 0; padding-left: 0.25in; }
+
+  /* Pasos */
+  .paso { display: grid; grid-template-columns: 1fr 2.15in; gap: 0.3in; align-items: start; margin-bottom: 0.28in; page-break-inside: avoid; }
+  .paso.sin-imagen { grid-template-columns: 1fr; }
+  .encabezado { display: flex; align-items: center; gap: 0.14in; margin-bottom: 0.1in; }
+  .num { flex: none; width: 0.52in; height: 0.52in; border-radius: 50%; background: var(--azul); color: #fff; font-size: 20pt; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .encabezado h2 { font-size: 19pt; }
+  .encabezado .cuando { font-size: 10.5pt; color: var(--gris); }
+  ol.instr { margin: 0; padding-left: 0.28in; }
+  ol.instr li { margin-bottom: 0.07in; }
+  .boton { display: inline-block; background: var(--azul); color: #fff; border-radius: 6px; padding: 0 6px; font-weight: bold; font-size: 11pt; white-space: nowrap; }
+  .boton.claro { background: #fff; color: var(--tinta); border: 1px solid #94a3b8; }
+  .tel { width: 2.15in; border: 6px solid #0f172a; border-radius: 22px; overflow: hidden; }
+  .tel img { display: block; width: 100%; }
+  .pie-foto { font-size: 9.5pt; color: var(--gris); text-align: center; margin-top: 0.05in; }
+  .nota { border-radius: 10px; padding: 0.1in 0.14in; font-size: 11pt; margin-top: 0.1in; }
+  .nota.tip { background: var(--verde); color: var(--verde-tinta); }
+  .nota.ojo { background: var(--ambar); color: var(--ambar-tinta); }
+  .nota.info { background: var(--azul-claro); color: #1e3a8a; }
+  .titulo-seccion { font-size: 13pt; color: var(--azul); font-weight: bold; text-transform: uppercase; letter-spacing: .06em; border-bottom: 2px solid var(--azul); padding-bottom: 0.04in; margin-bottom: 0.2in; }
+
+  /* Así sí / así no */
+  .burbujas { display: grid; grid-template-columns: 1fr 1fr; gap: 0.18in; margin-top: 0.12in; }
+  .caja { border-radius: 12px; padding: 0.12in 0.16in; }
+  .caja.si { background: var(--verde); }
+  .caja.no { background: #fee2e2; }
+  .caja h3 { font-size: 12pt; margin-bottom: 0.08in; }
+  .fila { display: flex; gap: 10px; align-items: center; margin-bottom: 0.06in; font-size: 10.5pt; }
+  .b { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #9ca3af; position: relative; flex: none; background: #fff; }
+  .b.llena { background: #111827; border-color: #111827; }
+  .b.media::after { content: ""; position: absolute; inset: 2px 9px 2px 2px; background: #111827; border-radius: 10px 0 0 10px; }
+  .b.palomita::after { content: "✓"; position: absolute; inset: -4px 0 0 4px; font-size: 18px; font-weight: bold; color: #111827; }
+  .b.cruz::after { content: "✕"; position: absolute; inset: -3px 0 0 4px; font-size: 17px; font-weight: bold; color: #111827; }
+  .b.tenue { background: #d1d5db; border-color: #d1d5db; }
+
+  .hoja { width: 2.15in; display: block; border: 1px solid var(--borde); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  table.tipos { width: 100%; border-collapse: collapse; margin-top: 0.1in; font-size: 11pt; }
+  table.tipos td, table.tipos th { border: 1px solid var(--borde); padding: 0.05in 0.08in; text-align: left; vertical-align: top; }
+  table.tipos th { background: #f1f5f9; }
+
+  .faq h3 { font-size: 12.5pt; margin-top: 0.14in; }
+  .faq p { margin: 0.03in 0 0; }
+  .colores { display: flex; gap: 0.12in; flex-wrap: wrap; margin-top: 0.06in; font-size: 11pt; }
+  .colores span { display: inline-flex; align-items: center; gap: 5px; }
+  .punto { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- ============================== PORTADA ============================== -->
+<section class="pagina portada">
+  <svg class="logo" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#1d4ed8"/><path d="M17 33l10 10 21-21" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <h1>CalificaYa</h1>
+  <div class="sub">Guía rápida para docentes</div>
+  <p class="lema">Califica exámenes de opción múltiple con la cámara de tu celular y obtén tus calificaciones en Excel en minutos.</p>
+  <div class="ruta">
+    <div><b>1</b>Instalar</div><div><b>2</b>Activar</div><div><b>3</b>Imprimir hojas</div><div><b>4</b>Capturar la clave</div>
+    <div><b>5</b>Calificar</div><div><b>6</b>Revisar</div><div><b>7</b>Descargar Excel</div><div><b>?</b>Dudas</div>
+  </div>
+  <div class="necesitas">
+    <h3>Lo que necesitas</h3>
+    <ul>
+      <li>Un <b>celular con cámara</b> (Android o iPhone) con <b>Chrome</b> o <b>Safari</b>.</li>
+      <li><b>Internet solo la primera vez</b>. Después funciona sin internet.</li>
+      <li>Tu <b>código de licencia</b> (llega a tu correo al comprar).</li>
+      <li>Una <b>impresora</b> o copiadora para las hojas de respuesta.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================== 1 y 2 ============================== -->
+<section class="pagina">
+  <div class="titulo-seccion">Antes de empezar (solo la primera vez)</div>
+
+  <div class="paso sin-imagen">
+    <div>
+      <div class="encabezado"><div class="num">1</div><div><h2>Abre e instala la app</h2><div class="cuando">Toma 2 minutos · necesitas internet</div></div></div>
+      <ol class="instr">
+        <li>En tu celular, abre el <b>enlace de CalificaYa</b> que viene en tu correo de compra.</li>
+        <li>Instálala para tenerla como cualquier otra app:
+          <ul>
+            <li><b>Android (Chrome):</b> toca el botón <span class="boton claro">📲 Instalar CalificaYa</span>. Si no aparece, toca los <b>tres puntos ⋮</b> (arriba a la derecha) → <b>Instalar app</b>.</li>
+            <li><b>iPhone (Safari):</b> toca <b>Compartir</b> (cuadro con flecha ↑) → <b>Agregar a inicio</b>.</li>
+          </ul>
+        </li>
+        <li>Verás el ícono azul de CalificaYa junto a tus demás apps. Ábrela desde ahí.</li>
+      </ol>
+      <div class="nota info">La primera vez la app descarga lo necesario para funcionar sin internet. Déjala abierta un minuto con internet.</div>
+    </div>
+  </div>
+
+  <div class="paso">
+    <div>
+      <div class="encabezado"><div class="num">2</div><div><h2>Activa tu licencia</h2><div class="cuando">Solo una vez en cada celular</div></div></div>
+      <ol class="instr">
+        <li>Busca en tu correo el mensaje de compra de <b>Gumroad</b> y copia tu <b>código de licencia</b> (letras, números y guiones).</li>
+        <li>Pégalo en el recuadro <b>Código de licencia</b>.</li>
+        <li>Toca <span class="boton">Activar</span>.</li>
+      </ol>
+      <div class="nota tip">Puedes activar tu licencia hasta en <b>3 celulares o computadoras</b>.</div>
+      <div class="nota ojo">Si cambias de celular y te dice que llegaste al máximo, escribe a soporte (el correo aparece en esa misma pantalla).</div>
+    </div>
+    <div><div class="tel"><img src="img/01-activacion.jpg" alt=""></div><div class="pie-foto">Pantalla de activación</div></div>
+  </div>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section class="pagina">
+  <div class="titulo-seccion">Preparar el examen</div>
+  <div class="paso">
+    <div>
+      <div class="encabezado"><div class="num">3</div><div><h2>Imprime las hojas de respuesta</h2><div class="cuando">Una vez por examen</div></div></div>
+      <ol class="instr">
+        <li>En el inicio toca <b>🖨️ Hojas de respuesta</b>.</li>
+        <li>Elige cuántas preguntas tiene tu examen: <b>20</b>, <b>50</b> o <b>100</b>.</li>
+        <li>Toca <span class="boton">Descargar PDF</span> e imprímelo. Puedes sacar copias en una copiadora.</li>
+      </ol>
+      <table class="tipos">
+        <tr><th>Hoja</th><th>Código del alumno</th></tr>
+        <tr><td><b>20</b> preguntas</td><td>No trae. Identificas al alumno por su nombre al revisar.</td></tr>
+        <tr><td><b>50</b> preguntas</td><td>5 dígitos</td></tr>
+        <tr><td><b>100</b> preguntas</td><td>9 dígitos (como el código UdeG)</td></tr>
+      </table>
+      <div class="nota tip">¿Tu examen es de 30 preguntas y quieres el código completo? Usa la hoja de 100: la app solo califica las preguntas de tu examen.</div>
+    </div>
+    <div><div class="tel"><img src="img/03-hojas.jpg" alt=""></div><div class="pie-foto">Elegir y descargar la hoja</div></div>
+  </div>
+
+  <div class="paso">
+    <div>
+      <h3 style="font-size:15pt;margin-bottom:.08in">Explica a tus alumnos cómo llenarla</h3>
+      <ul style="margin:0;padding-left:.25in">
+        <li>Rellenar la burbuja <b>completa</b>, con lápiz o pluma oscura.</li>
+        <li><b>Una sola</b> respuesta por pregunta. Si se equivocan, <b>borrar bien</b>.</li>
+        <li>Escribir su <b>código</b> en las casillas y rellenar el número debajo de cada una.</li>
+        <li>Marcar la <b>versión</b> (A, B, C…) si usas varias versiones.</li>
+        <li><b>No doblar</b> la hoja ni escribir sobre los cuadros negros.</li>
+      </ul>
+      <div class="burbujas">
+        <div class="caja si"><h3>✅ Así sí</h3>
+          <div class="fila"><span class="b"></span><span class="b llena"></span><span class="b"></span><span class="b"></span> Rellena completa</div>
+        </div>
+        <div class="caja no"><h3>❌ Así no</h3>
+          <div class="fila"><span class="b palomita"></span> Palomita</div>
+          <div class="fila"><span class="b cruz"></span> Cruz o tache</div>
+          <div class="fila"><span class="b media"></span> A medias</div>
+          <div class="fila"><span class="b tenue"></span> Muy tenue</div>
+        </div>
+      </div>
+    </div>
+    <div><img class="hoja" src="img/hoja100.jpg" alt=""><div class="pie-foto">Hoja de 100 preguntas</div></div>
+  </div>
+</section>
+
+<!-- ============================== 4 ============================== -->
+<section class="pagina">
+  <div class="paso">
+    <div>
+      <div class="encabezado"><div class="num">4</div><div><h2>Captura la clave</h2><div class="cuando">Las respuestas correctas del examen</div></div></div>
+      <ol class="instr">
+        <li>En el inicio toca <b>🔑 Claves de examen</b> → <span class="boton">+ Nueva clave</span>.</li>
+        <li>Escribe el <b>nombre del examen</b> y el <b>número de preguntas</b>.</li>
+        <li>Marca las respuestas correctas de una de estas formas:
+          <ul>
+            <li><b>A mano:</b> en cada pregunta, toca la letra correcta.</li>
+            <li><b>Más rápido:</b> llena una hoja de respuestas con la clave, toca <span class="boton claro">📷 Escanear hoja con la clave</span> y apunta la cámara a esa hoja.</li>
+          </ul>
+        </li>
+        <li>¿Varias versiones del examen? Toca <b>+ Versión</b> y captura cada una.</li>
+        <li>Toca <span class="boton">Guardar clave</span>.</li>
+      </ol>
+      <div class="nota info"><b>Opciones extra:</b> “Permitir varias correctas” (una pregunta acepta más de una respuesta) y “Puntos por pregunta” (alguna pregunta vale más).</div>
+      <div class="nota tip">Las claves se quedan guardadas en tu celular. Puedes <b>editarlas, duplicarlas</b> o <b>exportarlas</b> para pasarlas a otro celular o a otro maestro.</div>
+    </div>
+    <div><div class="tel"><img src="img/04-clave.jpg" alt=""></div><div class="pie-foto">Tocar la letra correcta</div>
+         <div class="tel" style="margin-top:.15in"><img src="img/05-claves.jpg" alt=""></div><div class="pie-foto">Tus claves guardadas</div></div>
+  </div>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section class="pagina">
+  <div class="titulo-seccion">El día del examen</div>
+  <div class="paso">
+    <div>
+      <div class="encabezado"><div class="num">5</div><div><h2>Califica con la cámara</h2><div class="cuando">Unos segundos por hoja · no necesitas internet</div></div></div>
+      <ol class="instr">
+        <li>En el inicio toca <span class="boton">📷 Calificar</span>.</li>
+        <li><i>(Opcional)</i> Toca <b>📄 Cargar lista</b> y elige el Excel de tu grupo (columna de código y columna de nombre). Así el Excel final saldrá <b>con nombres</b>.</li>
+        <li>Toca la <b>clave</b> del examen.</li>
+        <li>La primera vez, el celular pide permiso para la cámara: toca <b>Permitir</b>.</li>
+      </ol>
+    </div>
+    <div><div class="tel"><img src="img/06-nueva-sesion.jpg" alt=""></div><div class="pie-foto">Lista de alumnos y clave</div></div>
+  </div>
+  <div class="paso">
+    <div>
+      <ol class="instr" start="5">
+        <li>Pon la hoja sobre una mesa y apunta la cámara para que se vean <b>los cuadros negros de las esquinas</b> dentro del marco.</li>
+        <li><b>Mantén el celular quieto.</b> La hoja se captura sola (el celular vibra) y aparece la calificación.</li>
+        <li>Toca la tarjeta o espera un segundo y pon la <b>siguiente hoja</b>. Arriba ves cuántas llevas.</li>
+      </ol>
+      <div class="nota tip"><b>Para que lea rápido:</b> buena luz y sin reflejos · que tu sombra no tape la hoja · celular a 30–40 cm, derecho. La hoja puede estar volteada: la app la acomoda sola.</div>
+      <div class="nota ojo"><b>“El código ya se escaneó”:</b> probablemente pasaste la misma hoja dos veces → toca <b>Descartar esta hoja</b>.</div>
+    </div>
+    <div><div class="tel"><img src="img/08-calificacion.jpg" alt=""></div><div class="pie-foto">La calificación aparece al instante</div></div>
+  </div>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section class="pagina">
+  <div class="paso">
+    <div>
+      <div class="encabezado"><div class="num">6</div><div><h2>Revisa antes de descargar</h2><div class="cuando">Corrige lo que la app no pudo leer bien</div></div></div>
+      <ol class="instr">
+        <li>Toca <b>Revisar</b> (arriba).</li>
+        <li>Verás todas las hojas con su calificación. Las que tienen algo raro llevan una <b>etiqueta amarilla</b> (“Código incompleto”, “Sin versión”, “2 dudosas”…). Activa <b>Solo hojas con avisos</b> para ver solo esas.</li>
+        <li>Toca una hoja para verla en grande y corregir:
+          <ul>
+            <li><b>Una respuesta:</b> toca la burbuja correcta en la imagen.</li>
+            <li><b>El código:</b> escríbelo en <b>Código de alumno</b>.</li>
+            <li><b>La versión:</b> toca la letra.</li>
+          </ul>
+        </li>
+        <li>¿Una hoja salió mal? Ábrela y toca <b>Borrar hoja</b>; después vuelve a escanearla.</li>
+        <li>¿Te equivocaste en la clave? Toca <b>Corregir la clave</b>, arréglala y guarda: <b>todo se recalcula solo</b>.</li>
+      </ol>
+      <div class="colores">
+        <span><i class="punto" style="background:#16a34a"></i>Correcta</span>
+        <span><i class="punto" style="background:#dc2626"></i>Incorrecta</span>
+        <span><i class="punto" style="background:#ea580c"></i>Marcó dos</span>
+        <span><i class="punto" style="background:#d97706"></i>Dudosa</span>
+        <span><i class="punto" style="border:2px solid #16a34a"></i>La correcta era esta</span>
+      </div>
+    </div>
+    <div><div class="tel"><img src="img/10-revision.jpg" alt=""></div><div class="pie-foto">Lista de hojas</div>
+         <div class="tel" style="margin-top:.15in"><img src="img/11-detalle.jpg" alt=""></div><div class="pie-foto">Corregir una hoja</div></div>
+  </div>
+</section>
+
+<!-- ============================== 7 ============================== -->
+<section class="pagina">
+  <div class="paso sin-imagen">
+    <div>
+      <div class="encabezado"><div class="num">7</div><div><h2>Descarga el Excel</h2><div class="cuando">Al terminar de calificar</div></div></div>
+      <ol class="instr">
+        <li>Toca <span class="boton">Exportar Excel</span> (siempre está arriba mientras calificas, y abajo en Revisar).</li>
+        <li>El archivo se guarda en la carpeta <b>Descargas</b> de tu celular, con el nombre del examen y la fecha.</li>
+        <li>La app te pregunta <b>“¿Cerrar sesión y borrar los datos?”</b>
+          <ul>
+            <li><b>Aceptar:</b> ya terminaste. Se borran las hojas y calificaciones del celular (<b>tus claves se quedan</b>).</li>
+            <li><b>Cancelar:</b> quieres seguir calificando o revisando.</li>
+          </ul>
+        </li>
+      </ol>
+      <table class="tipos">
+        <tr><th>Pestaña del Excel</th><th>Qué contiene</th></tr>
+        <tr><td><b>Resultados</b></td><td>Código, nombre, aciertos, errores, en blanco, puntos y calificación de 0 a 10 y de 0 a 100. Los alumnos de tu lista que no presentaron salen al final.</td></tr>
+        <tr><td><b>Respuestas</b></td><td>Lo que contestó cada alumno: verde si es correcta, rojo si es incorrecta, gris en blanco.</td></tr>
+        <tr><td><b>Análisis por reactivo</b></td><td>Porcentaje del grupo que acertó cada pregunta. Las difíciles (menos de 40 %) salen en rojo. Al final: promedio, mediana, máximo, mínimo y desviación estándar.</td></tr>
+        <tr><td><b>Clave</b></td><td>Las respuestas correctas que usaste.</td></tr>
+      </table>
+      <div class="nota ojo"><b>Importante:</b> exporta antes de cerrar la app. Las calificaciones solo están en la memoria del celular; si la cierras sin exportar, se pierden (la app te avisa).</div>
+      <div class="nota info">Puedes abrir el Excel en Excel o Google Sheets, o mandarlo por correo o WhatsApp.</div>
+    </div>
+  </div>
+
+  <div class="titulo-seccion" style="margin-top:.3in">Compartir claves o cambiar de celular</div>
+  <ol class="instr">
+    <li>En <b>Claves de examen</b> toca <b>⬇️ Exportar todas</b>: se descarga un archivo con tus claves.</li>
+    <li>En el otro celular (o el de otro maestro) toca <b>⬆️ Importar JSON</b> y elige ese archivo.</li>
+  </ol>
+</section>
+
+<!-- ============================== FAQ ============================== -->
+<section class="pagina faq">
+  <div class="titulo-seccion">Preguntas frecuentes</div>
+  <h3>¿Necesito internet para calificar?</h3>
+  <p>No. Solo para instalar y activar la primera vez. Cuando tengas internet, la app revisa tu licencia sola cada mes, sin que hagas nada.</p>
+  <h3>Me salió “Conéctate para verificar tu licencia”.</h3>
+  <p>Pasaron muchos días sin internet. Conéctate a wifi o datos un momento y toca <b>Reintentar</b>.</p>
+  <h3>La app no lee la hoja.</h3>
+  <p>Revisa que se vean los cuadros negros de las esquinas, que haya buena luz y que la hoja no esté arrugada. También puedes tocar <b>🖼️ Foto</b> y elegir una foto ya tomada.</p>
+  <h3>Un alumno rellenó muy suave o borró mal.</h3>
+  <p>La app marca esa pregunta como <b>dudosa</b> para que la revises en el paso 6.</p>
+  <h3>Borré los datos del navegador y me pide activar otra vez.</h3>
+  <p>Es normal: vuelve a escribir tu código. Cuenta como un dispositivo más.</p>
+  <h3>¿Puedo usar hojas de ZipGrade?</h3>
+  <p>Sí. La app lee tanto las hojas de CalificaYa como las originales de ZipGrade.</p>
+  <h3>¿Mis alumnos y sus calificaciones se suben a internet?</h3>
+  <p>No. Todo se queda en tu celular y al cerrar la sesión se borra. Lo único que se envía es tu código de licencia, para comprobar que es válido.</p>
+  <h3>¿Dónde veo o desactivo mi licencia?</h3>
+  <p>En <b>⚙️ Ajustes</b>. Ahí también está el correo de soporte.</p>
+
+  <div class="nota info" style="margin-top:.3in;font-size:12pt">
+    <b>¿Necesitas ayuda?</b> Escribe al correo de soporte que aparece en <b>⚙️ Ajustes</b>. Cuéntanos qué pasó y, si puedes, manda una foto de la hoja que no se leyó.
+  </div>
+</section>
+</body>
+</html>
