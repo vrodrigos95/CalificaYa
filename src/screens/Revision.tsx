@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import Screen, { btn } from '../components/Screen';
+import ConfirmarAlumno from '../components/ConfirmarAlumno';
 import CargarAlumnos from '../components/CargarAlumnos';
 import { buscarAlumno } from '../session/alumnos';
 import { useExportar } from '../hooks/useExportar';
@@ -79,7 +80,8 @@ export default function Revision() {
           const alumno = buscarAlumno(h.codigo, sesion.alumnos);
           const nombre = alumno?.completo;
           return (
-            <li key={h.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+            <li key={h.id} className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+              <div className="flex items-center gap-3">
               <Link to={`/sesion/revisar/${h.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 {h.miniatura ? <img src={h.miniatura} alt="" className="h-20 w-16 shrink-0 rounded object-cover object-top" /> : <div className="h-20 w-16 shrink-0 rounded bg-slate-100" />}
                 <div className="min-w-0 flex-1">
@@ -96,6 +98,8 @@ export default function Revision() {
                 <div className="w-14 shrink-0 text-right text-2xl font-bold text-blue-700">{cal ?? '—'}</div>
               </Link>
               <button onClick={() => confirm(`¿Borrar la hoja #${h.numero}?`) && borrarHoja(h.id)} className="px-2 text-xl text-red-600" aria-label="Borrar hoja">🗑</button>
+              </div>
+              <div className="mt-2 empty:hidden"><ConfirmarAlumno hoja={h} sesion={sesion} compacto /></div>
             </li>
           );
         })}

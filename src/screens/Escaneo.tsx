@@ -5,12 +5,22 @@ import { textoAlerta } from '../grading/grade';
 import { useGuardSesion } from '../hooks/useGuardSesion';
 import { useExportar } from '../hooks/useExportar';
 import { miniaturaJpeg } from '../lib/imagen';
-import { getLayout, marcoHoja } from '../layout/sheetLayout';
-import type { ReadResult } from '../omr/reader';
+import { getLayout, marcoHoja, type Formato } from '../layout/sheetLayout';
+import type { GrayImage, ReadResult } from '../omr/reader';
 import { useSesion, type HojaSesion } from '../session/sessionStore';
 import { buscarAlumno } from '../session/alumnos';
 
 interface Aviso { hoja: HojaSesion; duplicada: HojaSesion | null }
+
+/** Lee en segundo plano lo escrito en Nombre/Fecha/Grupo (no frena el escaneo). */
+function leerEscrito(id: string, img: GrayImage, formato: Formato) {
+  const { guardarManuscrito } = useSesion.getState();
+  guardarManuscrito(id, { estado: 'leyendo' });
+  import('../ocr/ocrClient')
+    .then((m) => m.leerManuscrito(img, formato))
+    .then(({ texto, recorte }) => guardarManuscrito(id, { estado: 'listo', texto, recorte }))
+    .catch(() => guardarManuscrito(id, { estado: 'error' }));
+}
 
 const DURACION_AVISO = 1700;
 
@@ -30,6 +40,8 @@ export default function Escaneo() {
   }, []);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  // El lector de letra manuscrita tarda en cargar: se prepara mientras se encuadra la primera hoja.
+  useEffect(() => { import('../ocr/ocrClient').then((m) => m.precargarOCR()).catch(() => undefined); }, []);
 
   const onCaptura = useCallback(async (r: ReadResult) => {
     const { hoja: img, ...lectura } = r;
@@ -37,6 +49,7 @@ export default function Escaneo() {
     const k = img?.ppm ?? 1;
     const mini = img ? await miniaturaJpeg(img, { x: m.x * k, y: m.y * k, w: m.w * k, h: m.h * k }) : null;
     const res = agregarHoja(lectura, mini);
+    if (img) leerEscrito(res.hoja.id, img, r.formato);
     setAviso(res);
     if (timer.current) clearTimeout(timer.current);
     // Con avisos importantes la tarjeta se queda hasta que el docente la cierre.

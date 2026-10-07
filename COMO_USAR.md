@@ -115,6 +115,7 @@ Arriba verás cuántas hojas llevas.
 3. Toca una hoja para verla en grande:
    - **Verde** = correcta, **rojo** = incorrecta, **naranja** = marcó dos opciones.
    - Para **corregir una respuesta**, toca la burbuja correcta en la imagen o en la lista de abajo.
+   - **Lo que escribió el alumno:** arriba ves en grande lo que puso en Nombre, Fecha y Grupo. Si cargaste la lista y se parece a alguien, la app pregunta **“¿Es …?”**: toca **✓ Sí** para asignarlo o **✗ No** para ver otra opción. (También aparece en la lista de Revisar, para confirmar varias hojas seguidas.) La app lee mejor la letra de molde clara y los números; con letra cursiva puede no reconocer a nadie, y entonces lo escribes tú.
    - Para **poner o corregir al alumno**, escribe en el recuadro “Alumno” lo que puso en «Nombre»: su **código, número de lista, nombre o apellido**. Si cargaste la lista, la app lo busca y muestra su nombre completo (✓). Si coincide con varios (por ejemplo, dos “López”), elige el correcto en los botones que aparecen.
    - Para **cambiar la versión**, toca la letra.
 4. Si la hoja salió mal, tócala y elige **Borrar hoja**. Después vuelve a escanearla.

@@ -7,6 +7,7 @@ import type { MarkRead } from '../omr/classify';
 import type { ClaveExamen } from '../keys/model';
 import type { ReadResult } from '../omr/reader';
 import { buscarAlumno, type Alumno } from './alumnos';
+import type { TextoManuscrito } from '../ocr/manuscrito';
 
 /** Lectura sin la imagen completa (solo se conserva la miniatura). */
 export type LecturaSesion = Omit<ReadResult, 'hoja'>;
@@ -24,6 +25,17 @@ export interface HojaSesion {
   /** Preguntas corregidas a mano (índices), y si se corrigió código o versión. */
   editadas: { preguntas: number[]; codigo: boolean; version: boolean };
   resultado: ResultadoHoja;
+  /** Lo escrito a mano en Nombre/Fecha/Grupo (OCR, se lee en segundo plano) y el recorte para verlo. */
+  manuscrito: Manuscrito | null;
+  /** Alumnos sugeridos por el OCR que el docente dijo que no son (ids de la lista). */
+  descartados: string[];
+}
+
+export interface Manuscrito {
+  estado: 'leyendo' | 'listo' | 'error';
+  texto: TextoManuscrito;
+  /** URL de objeto (blob:) del recorte de los recuadros escritos. */
+  recorte: string | null;
 }
 
 export type Fila = Pick<MarkRead, 'marcadas' | 'estado'>;
@@ -57,6 +69,10 @@ interface Estado {
   marcarExportada: () => void;
   /** Carga (o quita, con null) la lista de alumnos de la sesión. */
   cargarAlumnos: (alumnos: Alumno[] | null) => void;
+  /** Guarda lo leído a mano en una hoja (recorte: imagen de los recuadros). */
+  guardarManuscrito: (id: string, m: { estado: Manuscrito['estado']; texto?: TextoManuscrito; recorte?: Blob | null }) => void;
+  /** El docente indicó que la sugerencia no es ese alumno. */
+  descartarSugerencia: (id: string, alumnoId: string) => void;
   cerrar: () => void;
 }
 
@@ -89,6 +105,8 @@ export const useSesion = create<Estado>((set, get) => ({
       respuestas,
       editadas: { preguntas: [], codigo: false, version: false },
       resultado: calificar(respuestas, s.clave),
+      manuscrito: null,
+      descartados: [],
     };
     set({ sesion: { ...s, hojas: [...s.hojas, hoja], exportada: false, siguiente: s.siguiente + 1 } });
     return { hoja, duplicada };
@@ -99,7 +117,27 @@ export const useSesion = create<Estado>((set, get) => ({
     if (!s) return;
     const h = s.hojas.find((x) => x.id === id);
     if (h?.miniatura) URL.revokeObjectURL(h.miniatura);
+    if (h?.manuscrito?.recorte) URL.revokeObjectURL(h.manuscrito.recorte);
     set({ sesion: { ...s, hojas: s.hojas.filter((x) => x.id !== id), exportada: false } });
+  },
+
+  guardarManuscrito: (id, m) => {
+    const s = get().sesion;
+    const h = s?.hojas.find((x) => x.id === id);
+    if (!s || !h) return; // la hoja se borró mientras se leía
+    if (h.manuscrito?.recorte && m.recorte !== undefined) URL.revokeObjectURL(h.manuscrito.recorte);
+    const manuscrito: Manuscrito = {
+      estado: m.estado,
+      texto: m.texto ?? h.manuscrito?.texto ?? {},
+      recorte: m.recorte !== undefined ? (m.recorte ? URL.createObjectURL(m.recorte) : null) : h.manuscrito?.recorte ?? null,
+    };
+    set({ sesion: { ...s, hojas: s.hojas.map((x) => (x.id === id ? { ...x, manuscrito } : x)) } });
+  },
+
+  descartarSugerencia: (id, alumnoId) => {
+    const s = get().sesion;
+    if (!s) return;
+    set({ sesion: { ...s, hojas: s.hojas.map((x) => (x.id === id ? { ...x, descartados: [...x.descartados, alumnoId] } : x)) } });
   },
 
   corregir: (id, c) => {
@@ -146,7 +184,10 @@ export const useSesion = create<Estado>((set, get) => ({
 
   cerrar: () => {
     const s = get().sesion;
-    if (s) for (const h of s.hojas) if (h.miniatura) URL.revokeObjectURL(h.miniatura);
+    if (s) for (const h of s.hojas) {
+      if (h.miniatura) URL.revokeObjectURL(h.miniatura);
+      if (h.manuscrito?.recorte) URL.revokeObjectURL(h.manuscrito.recorte);
+    }
     set({ sesion: null });
   },
 }));

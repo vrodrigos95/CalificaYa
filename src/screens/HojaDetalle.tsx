@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
+import ConfirmarAlumno from '../components/ConfirmarAlumno';
 import HojaRevision from '../components/HojaRevision';
 import Screen, { btn } from '../components/Screen';
 import { textoAlerta } from '../grading/grade';
@@ -95,6 +96,8 @@ export default function HojaDetalle() {
             {avisos.filter((a) => a.startsWith('Código') || a.startsWith('Alumno')).map((a) => <li key={a}>⚠️ {a}</li>)}
           </ul>
         )}
+
+        <ConfirmarAlumno hoja={hoja} sesion={sesion} />
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
           <div>

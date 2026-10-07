@@ -32,6 +32,14 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,webmanifest,xlsx}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // opencv.js pesa ~13 MB
+        // Tesseract (OCR de lo escrito a mano, ~6 MB por celular) no se precarga
+        // completo: se guarda la primera vez que se usa (ver precargarOCR).
+        globIgnores: ['**/tesseract/**'],
+        runtimeCaching: [{
+          urlPattern: ({ url }) => url.pathname.includes('/tesseract/'),
+          handler: 'CacheFirst',
+          options: { cacheName: 'tesseract', expiration: { maxEntries: 10 } },
+        }],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
       },
