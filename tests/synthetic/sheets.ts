@@ -6,6 +6,7 @@ import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
 import { getLayout, PAGE_H, PAGE_W, type Bubble, type Formato } from '../../src/layout/sheetLayout';
 import type { CV } from '../../src/omr/cv';
 import type { RawImage } from '../../src/omr/reader';
+import { zonasManuscritas, type TextoManuscrito } from '../../src/ocr/manuscrito';
 
 /** Tipo de trazo con el que el "alumno" marca una burbuja. */
 export type Trazo = 'pluma' | 'lapiz' | 'tenue' | 'medio' | 'borrado' | 'tache';
@@ -151,7 +152,7 @@ function dibujarTrazo(g: SKRSContext2D, b: Bubble, t: Trazo, ppm: number, rand: 
 }
 
 /** Dibuja la hoja impresa y llena, vista de frente, a `ppm` píxeles por mm. */
-export function dibujarHoja(h: HojaLlena, ppm: number, seed = 1) {
+export function dibujarHoja(h: HojaLlena, ppm: number, seed = 1, escrito?: TextoManuscrito) {
   const rand = rng(seed);
   const l = getLayout(h.formato);
   const W = Math.round(PAGE_W * ppm), H = Math.round(PAGE_H * ppm);
@@ -185,8 +186,15 @@ export function dibujarHoja(h: HojaLlena, ppm: number, seed = 1) {
   // Nombre escrito a mano
   g.fillStyle = 'rgba(20,20,60,0.9)';
   g.font = `${4 * ppm}px serif`;
-  const hb = l.headers[0]?.rect ?? l.boxes[0];
-  if (hb) g.fillText('Juan Pérez López', (hb.x + 35) * ppm, (hb.y + 7) * ppm);
+  if (escrito) {
+    for (const z of zonasManuscritas(l)) {
+      const t = escrito[z.campo];
+      if (t) g.fillText(t, (z.rect.x + 2) * ppm, (z.rect.y + z.rect.h * 0.72) * ppm);
+    }
+  } else {
+    const hb = l.headers[0]?.rect ?? l.boxes[0];
+    if (hb) g.fillText('Juan Pérez López', (hb.x + 35) * ppm, (hb.y + 7) * ppm);
+  }
   for (const m of h.marcas) dibujarTrazo(g, m.burbuja, m.trazo, ppm, rand);
   return c;
 }

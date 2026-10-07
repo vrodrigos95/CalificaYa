@@ -10,12 +10,13 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "icons": "node scripts/make-icons.mjs",
-    "predev": "node scripts/copy-opencv.mjs",
-    "prebuild": "node scripts/copy-opencv.mjs",
-    "dev:celular": "node scripts/copy-opencv.mjs && vite --host --mode celular"
+    "predev": "node scripts/copy-opencv.mjs && node scripts/copy-tesseract.mjs",
+    "prebuild": "node scripts/copy-opencv.mjs && node scripts/copy-tesseract.mjs",
+    "dev:celular": "node scripts/copy-opencv.mjs && node scripts/copy-tesseract.mjs && vite --host --mode celular"
   },
   "dependencies": {
     "@techstark/opencv-js": "^5.0.0-release.1",
+    "@tesseract.js-data/spa": "^1.0.0",
     "dexie": "^4.4.6",
     "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",
@@ -23,6 +24,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0",
+    "tesseract.js": "^7.0.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
