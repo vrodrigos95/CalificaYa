@@ -154,6 +154,9 @@ Puedes abrirlo en Excel, Google Sheets o enviarlo por correo o WhatsApp.
 **¿Necesito internet para calificar?**
 No. Solo para instalar y activar la primera vez. Cada mes, cuando tengas internet, la app revisa tu licencia sola, sin que hagas nada.
 
+**¿Cómo se actualiza la app?**
+Cuando hay una versión nueva, aparece abajo la barra **“Hay una versión nueva de CalificaYa”**. Toca **Actualizar** cuando no estés calificando (si tienes una sesión abierta, primero exporta el Excel). En **⚙️ Ajustes → Versión** ves qué versión tienes y puedes tocar **Buscar actualización**.
+
 **Me salió “Conéctate para verificar tu licencia”.**
 Pasaron muchos días sin internet. Conéctate a wifi o datos un momento y toca **Reintentar**.
 
