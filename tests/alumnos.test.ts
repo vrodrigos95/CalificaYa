@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import { buscarAlumno, coincidencias, filasDeExcel, interpretarFilas, leerListaAlumnos, parsearCSV, plantillaAlumnos, PLANTILLA_COLUMNAS, type Alumno } from '../src/session/alumnos';
@@ -63,42 +64,61 @@ describe('lista de alumnos', () => {
     expect(buscarAlumno('2190?0001', lista)).toBeNull();
   });
 
-  // Lista llenada con la plantilla de la app
+  // Lista llenada con la plantilla de la app (No. de lista, Apellidos, Nombre(s), Código)
   const plantilla = [
     PLANTILLA_COLUMNAS,
-    ['1', 'Ana María', 'López García', '219000001'],
-    ['2', 'Beto', 'Ruiz Pérez', '219000002'],
-    ['3', 'Carla', 'López Soto', ''],
-    ['4', 'José', 'Núñez', '219000004'],
+    ['1', 'López García', 'Ana María', '219000001'],
+    ['2', 'Ruiz Pérez', 'Beto', '219000002'],
+    ['3', 'López Soto', 'Carla', ''],
+    ['4', 'Núñez', 'José', '219000004'],
     ['5', '', '', ''], // número de lista sin alumno: se ignora
   ];
 
-  it('plantilla: lee No. de lista, nombre, apellidos y código', () => {
+  it('plantilla: lee No. de lista, apellidos, nombre y código', () => {
     const { alumnos, advertencias } = interpretarFilas(plantilla);
     expect(advertencias).toEqual([]);
     expect(alumnos).toHaveLength(4);
-    expect(alumnos[0]).toEqual({ id: '219000001', lista: '1', codigo: '219000001', nombre: 'Ana María', apellidos: 'López García', completo: 'Ana María López García' });
+    expect(alumnos[0]).toEqual({ id: '219000001', lista: '1', codigo: '219000001', nombre: 'Ana María', apellidos: 'López García', completo: 'López García Ana María' });
     expect(alumnos[2]).toMatchObject({ id: '#3', lista: '3', codigo: '' });
   });
 
-  it('plantilla de Excel descargable con las columnas correctas', async () => {
+  it('la plantilla publicada (public/plantilla-alumnos.xlsx) es la que genera la app', async () => {
+    // Para regenerarla: writeFileSync('public/plantilla-alumnos.xlsx', await plantillaAlumnos(ExcelJS))
+    const publicada = readFileSync('public/plantilla-alumnos.xlsx');
+    const filas = await filasDeExcel(publicada.buffer.slice(publicada.byteOffset, publicada.byteOffset + publicada.byteLength) as ArrayBuffer, ExcelJS);
+    expect(filas).toEqual([PLANTILLA_COLUMNAS]);
     const buf = await plantillaAlumnos(ExcelJS);
-    const filas = await filasDeExcel(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer, ExcelJS);
-    expect(filas[0]).toEqual(PLANTILLA_COLUMNAS);
-    expect(interpretarFilas(filas).alumnos).toEqual([]);
+    expect(await filasDeExcel(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer, ExcelJS)).toEqual(filas);
+  });
+
+  it('listas sin código ni número de lista: se identifican por el nombre, sin perder apellidos repetidos', () => {
+    const { alumnos, advertencias } = interpretarFilas([['Apellido paterno', 'Apellido materno', 'Nombre(s)'], ['López', 'García', 'Ana'], ['López', 'Soto', 'Carla'], ['Ruiz', 'Pérez', 'Beto']]);
+    expect(advertencias).toEqual([]);
+    expect(alumnos.map((a) => [a.codigo, a.completo])).toEqual([['', 'López García Ana'], ['', 'López Soto Carla'], ['', 'Ruiz Pérez Beto']]);
+    expect(buscarAlumno('carla', alumnos)?.completo).toBe('López Soto Carla');
+    expect(coincidencias('lopez', alumnos)).toHaveLength(2);
+  });
+
+  it('«N.L.» y números cortos sin título se toman como número de lista', () => {
+    const conTitulo = interpretarFilas([['N.L.', 'Nombre del alumno'], ['1', 'LOPEZ GARCIA ANA'], ['2', 'RUIZ PEREZ BETO']]).alumnos;
+    expect(conTitulo.map((a) => [a.lista, a.codigo])).toEqual([['1', ''], ['2', '']]);
+    expect(buscarAlumno('2', conTitulo)?.completo).toBe('RUIZ PEREZ BETO');
+    const sinTitulo = interpretarFilas([['1', 'Ana López'], ['2', 'Beto Ruiz']]).alumnos;
+    expect(buscarAlumno('2', sinTitulo)?.completo).toBe('Beto Ruiz');
+    expect(sinTitulo[0].lista).toBe('1');
   });
 
   it('busca por código, número de lista, nombre o apellidos', () => {
     const { alumnos } = interpretarFilas(plantilla);
     const nombre = (t: string) => buscarAlumno(t, alumnos)?.completo;
-    expect(nombre('219000002')).toBe('Beto Ruiz Pérez'); // código
-    expect(nombre('3')).toBe('Carla López Soto'); // número de lista
-    expect(nombre('03')).toBe('Carla López Soto');
-    expect(nombre('beto')).toBe('Beto Ruiz Pérez'); // nombre, sin mayúsculas
-    expect(nombre('Nuñez')).toBe('José Núñez'); // apellido, sin importar acentos
-    expect(nombre('jose nunez')).toBe('José Núñez');
-    expect(nombre('Ana Lopez')).toBe('Ana María López García'); // nombre + apellido
-    expect(nombre('lopez g')).toBe('Ana María López García'); // inicio de palabras
+    expect(nombre('219000002')).toBe('Ruiz Pérez Beto'); // código
+    expect(nombre('3')).toBe('López Soto Carla'); // número de lista
+    expect(nombre('03')).toBe('López Soto Carla');
+    expect(nombre('beto')).toBe('Ruiz Pérez Beto'); // nombre, sin mayúsculas
+    expect(nombre('Nuñez')).toBe('Núñez José'); // apellido, sin importar acentos
+    expect(nombre('nunez jose')).toBe('Núñez José');
+    expect(nombre('Lopez Ana')).toBe('López García Ana María'); // apellido + nombre
+    expect(nombre('lopez g')).toBe('López García Ana María'); // inicio de palabras
     expect(nombre('López')).toBeUndefined(); // ambiguo: Ana y Carla
     expect(coincidencias('López', alumnos).map((a) => a.lista)).toEqual(['1', '3']);
     expect(nombre('Pedro')).toBeUndefined();

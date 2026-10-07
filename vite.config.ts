@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       // El service worker solo guarda los archivos de la app (código, estilos,
       // íconos y OpenCV.js) para funcionar sin internet. Nunca datos de alumnos.
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest,xlsx}'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // opencv.js pesa ~13 MB
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,

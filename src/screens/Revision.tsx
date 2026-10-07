@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import Screen, { btn } from '../components/Screen';
 import CargarAlumnos from '../components/CargarAlumnos';
 import { buscarAlumno } from '../session/alumnos';
@@ -13,7 +13,8 @@ export default function Revision() {
   const borrarHoja = useSesion((s) => s.borrarHoja);
   const cerrar = useSesion((s) => s.cerrar);
   const cargarAlumnos = useSesion((s) => s.cargarAlumnos);
-  const [verLista, setVerLista] = useState(false);
+  const [params] = useSearchParams();
+  const [verLista, setVerLista] = useState(params.get('lista') === '1');
   const navigate = useNavigate();
   const { exportar, exportando } = useExportar();
   const [soloAvisos, setSoloAvisos] = useState(false);

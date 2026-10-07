@@ -22,7 +22,7 @@ export interface ListaAlumnos {
 
 const quitarAcentos = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 const ES_CODIGO = /^(c[oó]digo|codigo|clave|id|matr[ií]cula|matricula|no\.? ?de ?(alumno|control)|cuenta|registro)/;
-const ES_LISTA = /^((n[uú]m(ero)?|no|n[°º])\.?\s*(de\s*)?lista|lista|no\.?|n[°º]\.?|#|num\.?|numero)$/;
+const ES_LISTA = /^((n[uú]m(ero)?|no|n[°º])\.?\s*(de\s*)?lista|lista|no\.?|n[°º]\.?|#|num\.?|numero|n\.?\s*l\.?)$/;
 const ES_APELLIDO = /^(apellido|ap\.|paterno|materno|primer apellido|segundo apellido)/;
 const ES_NOMBRE = /^(nombre|alumno|estudiante)/;
 
@@ -117,15 +117,19 @@ export function interpretarFilas(filas: string[][]): ListaAlumnos {
     const cols = Array.from({ length: ncols }, (_, i) => i);
     const numerica = (i: number) => muestra.filter((f) => /^\d[\d\s-]*(\.0+)?$/.test(f[i] ?? '')).length >= muestra.length * 0.6;
     if (colCodigo < 0 && colLista < 0) {
-      const numericas = cols.filter(numerica);
-      // Dos columnas numéricas: la de números cortos (1, 2, 3…) es el número de lista.
+      // Solo columnas con números: una lista sin código ni número de lista se
+      // identifica por el nombre (nunca se usa un apellido como código).
+      const numericas = cols.filter((i) => !colsNombre.includes(i) && !colsApellido.includes(i) && numerica(i));
+      // Números cortos (1, 2, 3…) = número de lista; largos = código.
       const corta = (i: number) => muestra.every((f) => (f[i] ?? '').replace(/\.0+$/, '').length <= 3);
       if (numericas.length >= 2 && corta(numericas[0])) [colLista, colCodigo] = numericas;
-      else colCodigo = numericas[0] ?? 0;
+      else if (numericas.length && corta(numericas[0])) colLista = numericas[0];
+      else if (numericas.length) colCodigo = numericas[0];
     }
     if (colsNombre.length + colsApellido.length === 0)
       colsNombre = cols.filter((i) => i !== colCodigo && i !== colLista && muestra.some((f) => /[a-záéíóúñ]/i.test(f[i] ?? '')));
-    if (idxEnc < 0 && filas[0] && !/\d/.test(filas[0][colCodigo] ?? filas[0][colLista] ?? '')) inicio = 1; // encabezado no reconocido
+    const colNum = colCodigo >= 0 ? colCodigo : colLista;
+    if (idxEnc < 0 && filas[0] && (colNum < 0 || !/\d/.test(filas[0][colNum] ?? ''))) inicio = 1; // encabezado no reconocido
   }
 
   const unir = (f: string[], cols: number[]) => cols.map((i) => f[i] ?? '').filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
@@ -158,7 +162,7 @@ export async function leerListaAlumnos(archivo: { name: string; arrayBuffer: () 
   return interpretarFilas(parsearCSV(texto));
 }
 
-export const PLANTILLA_COLUMNAS = ['No. de lista', 'Nombre', 'Apellidos', 'Código'];
+export const PLANTILLA_COLUMNAS = ['No. de lista', 'Apellidos', 'Nombre(s)', 'Código'];
 
 /** Plantilla en Excel para capturar la lista de alumnos. */
 export async function plantillaAlumnos(excel?: typeof ExcelJSNS): Promise<Uint8Array> {
@@ -168,8 +172,8 @@ export async function plantillaAlumnos(excel?: typeof ExcelJSNS): Promise<Uint8A
   const ws = wb.addWorksheet('Alumnos', { views: [{ state: 'frozen', ySplit: 1 }] });
   ws.columns = [
     { header: PLANTILLA_COLUMNAS[0], width: 14 },
-    { header: PLANTILLA_COLUMNAS[1], width: 26 },
-    { header: PLANTILLA_COLUMNAS[2], width: 30 },
+    { header: PLANTILLA_COLUMNAS[1], width: 30 },
+    { header: PLANTILLA_COLUMNAS[2], width: 26 },
     // Como texto, para que no se pierdan los ceros a la izquierda.
     { header: PLANTILLA_COLUMNAS[3], width: 18, style: { numFmt: '@' } },
   ];
