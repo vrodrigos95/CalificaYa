@@ -41,6 +41,8 @@ export interface ReadResult {
   confianza: number;
   /** Error medio de ajuste de los marcadores, en mm. */
   errorMarcadores: number;
+  /** Nitidez de la hoja enderezada (varianza del laplaciano); baja = movida o desenfocada. */
+  nitidez: number;
   /** Hoja enderezada en escala de grises (si se pidió). */
   hoja?: GrayImage;
   /** Marcadores encontrados en la imagen de entrada (coordenadas de la imagen). */
@@ -291,6 +293,25 @@ function rellenoBurbuja(dark: Uint8Array, w: number, hgt: number, b: Bubble, ppm
   return n ? s / n / 255 : 0;
 }
 
+/**
+ * Nitidez de la hoja enderezada (sin efecto de la iluminación): varianza del
+ * laplaciano. Una foto movida o desenfocada da valores bajos aunque las
+ * burbujas se alcancen a leer; ver NITIDEZ_MIN.
+ */
+function medirNitidez(cv: CV, norm: ReturnType<CV["Mat"]>): number {
+  // Un suavizado ligero quita el ruido del sensor, que si no pasaría por nitidez.
+  const suave = new cv.Mat();
+  cv.GaussianBlur(norm, suave, new cv.Size(3, 3), 0.8);
+  const lap = new cv.Mat();
+  cv.Laplacian(suave, lap, cv.CV_32F, 1);
+  suave.delete();
+  const media = new cv.Mat(), desv = new cv.Mat();
+  cv.meanStdDev(lap, media, desv);
+  const v = desv.data64F[0] ** 2;
+  lap.delete(); media.delete(); desv.delete();
+  return Math.round(v);
+}
+
 // ---------------------------------------------------------------------------
 // API
 // ---------------------------------------------------------------------------
@@ -371,6 +392,7 @@ export function readSheet(cv: CV, image: RawImage, opts: ReadOptions = {}): Read
     const norm = new cv.Mat();
     cv.divide(hoja, fondo, norm, 255);
     fondo.delete();
+    const nitidez = medirNitidez(cv, norm);
     const dark = new cv.Mat();
     cv.bitwise_not(norm, dark);
     norm.delete();
@@ -393,6 +415,7 @@ export function readSheet(cv: CV, image: RawImage, opts: ReadOptions = {}): Read
       calibracion: cal,
       confianza: Math.min(1, mejor.puntaje / 3),
       errorMarcadores,
+      nitidez,
       marcadores: imgPts,
     };
     if (opts.incluirHoja) result.hoja = { data: new Uint8Array(hoja.data), width: W, height: Hh, ppm };

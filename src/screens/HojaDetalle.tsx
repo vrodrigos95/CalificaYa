@@ -127,6 +127,10 @@ export default function HojaDetalle() {
               </div>
             ) : conLista && hoja.codigo && !hoja.codigo.includes('?') ? (
               <p className="mt-1 text-sm text-amber-700">No está en la lista de alumnos</p>
+            ) : !conLista ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Para buscar al alumno por No. de lista o nombre, carga la lista en <Link to="/sesion/revisar?lista=1" className="underline">Revisar → Lista de alumnos</Link>.
+              </p>
             ) : null}
           </div>
           <div>

@@ -13,7 +13,7 @@ import { interpretarFilas } from '../src/session/alumnos';
 const fila = (o: number[]): MarkRead => ({ marcadas: o, estado: o.length === 0 ? 'blanco' : o.length === 1 ? 'ok' : 'doble', scores: [] });
 function lectura(codigo: string, resp: number[][], version = 0): LecturaSesion {
   return {
-    ok: true, formato: 50, rotacion: 0, confianza: 1, errorMarcadores: 0, marcadores: [],
+    ok: true, formato: 50, rotacion: 0, confianza: 1, errorMarcadores: 0, nitidez: 100, marcadores: [],
     calibracion: { vacia: 0, llena: 1, umbral: 0.4, tenue: 0.2 },
     preguntas: resp.map(fila), version: fila([version]),
     id: { digitos: [], texto: codigo, completo: !!codigo && !codigo.includes('?') },

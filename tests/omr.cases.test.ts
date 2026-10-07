@@ -152,3 +152,16 @@ describe('rendimiento', () => {
     expect(performance.now() - t).toBeLessThan(1500);
   });
 });
+
+describe('nitidez (para no capturar fotos movidas o borrosas)', () => {
+  it('una hoja enfocada pasa el umbral y una borrosa no, aunque las burbujas se lean igual', () => {
+    const h = llenarManual(20, { respuestas: ciclo(20) });
+    const nitida = leer(h, { ruido: 6 });
+    const suave = leer(h, { desenfoque: 1.5, ruido: 6 });
+    const borrosa = leer(h, { desenfoque: 3, ruido: 6 });
+    expect(nitida.nitidez).toBeGreaterThanOrEqual(60); // NITIDEZ_BUENA en Scanner.tsx
+    expect(suave.nitidez).toBeLessThan(60);
+    expect(borrosa.nitidez).toBeLessThan(25); // NITIDEZ_MIN en Scanner.tsx
+    expect(borrosa.preguntas.map((p) => p.marcadas)).toEqual(h.respuestas);
+  });
+});

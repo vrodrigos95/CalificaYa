@@ -86,11 +86,11 @@ Las claves quedan guardadas en tu celular para siempre (hasta que las borres).
 ## Paso 5. Calificar
 
 1. En el inicio toca **📷 Calificar**.
-2. *(Opcional)* Toca **📄 Cargar lista** y elige el Excel de tu grupo. Si no tienes uno, toca **⬇️ Descargar plantilla de Excel** y llénala: **No. de lista, Nombre, Apellidos y Código** (ninguna columna es obligatoria, pero cada alumno necesita al menos nombre o código). Así podrás identificar a cada alumno y el Excel final saldrá con los nombres.
+2. *(Opcional)* Toca **📄 Cargar lista** y elige el Excel de tu grupo. Si no tienes uno, toca **⬇️ Plantilla** y llénala: **No. de lista, Apellidos, Nombre(s) y Código** (ninguna columna es obligatoria, pero cada alumno necesita al menos nombre o código). Así podrás identificar a cada alumno y el Excel final saldrá con los nombres.
 3. Toca la **clave** del examen que vas a calificar.
 4. La primera vez, el celular te pedirá permiso para usar la cámara: toca **Permitir**.
 5. Pon la hoja sobre una mesa y apunta la cámara para que **se vean los 4 cuadros negros de las esquinas** dentro del marco.
-6. **Mantén el celular quieto.** La hoja se captura sola (vibra) y verás la calificación.
+6. **Mantén el celular quieto.** La app espera a que la imagen se vea **nítida** antes de capturar (verás “Enfocando…”). La hoja se captura sola (vibra) y verás la calificación. Si aparece “La imagen sale borrosa”, mejora la luz o acerca/aleja un poco el celular.
 7. Toca la tarjeta o espera un segundo, y pon la **siguiente hoja**.
 
 Arriba verás cuántas hojas llevas.
