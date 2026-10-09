@@ -15,11 +15,16 @@ function versionApp(): string {
   return [process.env.npm_package_version ?? '', commit.trim().slice(0, 7), fecha].filter(Boolean).join(' · ');
 }
 
+const VERSION = versionApp();
+
 export default defineConfig(({ mode }) => ({
-  define: { __APP_VERSION__: JSON.stringify(versionApp()) },
+  define: { __APP_VERSION__: JSON.stringify(VERSION) },
   // GitHub Pages publica en /<repositorio>/ (lo define el flujo .github/workflows/pages.yml).
   base: process.env.VITE_BASE || '/',
   plugins: [
+    // version.json: la versión publicada, para que la app compare con la suya
+    // sin depender del service worker (ver lib/actualizacion.ts).
+    { name: 'version-json', generateBundle() { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: VERSION }) }); } },
     react(),
     tailwindcss(),
     ...(mode === 'celular' ? [basicSsl()] : []),
