@@ -2,7 +2,7 @@ import { createCanvas } from '@napi-rs/canvas';
 import { createWorker, OEM, PSM, type Worker } from 'tesseract.js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { getLayout } from '../src/layout/sheetLayout';
-import { prepararParaOCR, recortar, sugerirAlumnos, tieneEscritura, zonasManuscritas, type TextoManuscrito } from '../src/ocr/manuscrito';
+import { binarizar, prepararParaOCR, recortar, sugerirAlumnos, tieneEscritura, zonasManuscritas, type TextoManuscrito } from '../src/ocr/manuscrito';
 import type { CV } from '../src/omr/cv';
 import { readSheet, type GrayImage } from '../src/omr/reader';
 import { interpretarFilas } from '../src/session/alumnos';
@@ -52,6 +52,23 @@ describe('sugerencias a partir del texto leído (con errores de OCR)', () => {
     expect(primero({ grupo: '219000004' })).toBe('Núñez Ortega José Luis');
   });
 
+  it('palabras pegadas o partidas por el OCR', () => {
+    expect(primero({ nombre: 'MarianaHernandez' })).toBe('Hernández Ruiz Mariana');
+    expect(primero({ nombre: 'Mariana Her nandez' })).toBe('Hernández Ruiz Mariana');
+    expect(primero({ nombre: 'JoseLuisNunez' })).toBe('Núñez Ortega José Luis');
+  });
+
+  it('«Ana» no se confunde con «Mariana» por estar dentro de la palabra', () => {
+    const s = sugerirAlumnos({ nombre: 'Mariana Hernandez' }, lista);
+    expect(s[0].alumno.completo).toBe('Hernández Ruiz Mariana');
+    const ana = s.find((x) => x.alumno.lista === '1');
+    expect(!ana || ana.puntaje < s[0].puntaje - 0.5).toBe(true);
+  });
+
+  it('usa las dos lecturas del nombre (contraste normal / blanco y negro)', () => {
+    expect(primero({ nombre: 'Mar1a11a Hcrn / Mariaua Hernandez' })).toBe('Hernández Ruiz Mariana');
+  });
+
   it('sin parecido no propone a nadie', () => {
     expect(sugerirAlumnos({ nombre: 'xqzt wvk' }, lista)).toEqual([]);
     expect(sugerirAlumnos({ nombre: '' }, lista)).toEqual([]);
@@ -86,7 +103,9 @@ describe('de la foto al alumno (OCR real con Tesseract)', () => {
     for (const z of zonasManuscritas(getLayout(f))) {
       const img = recortar(r.hoja, z.rect);
       if (!tieneEscritura(img)) continue;
-      texto[z.campo] = (await worker.recognize(png(prepararParaOCR(img)))).data.text.trim();
+      const prep = prepararParaOCR(img);
+      const leidos = [(await worker.recognize(png(prep))).data.text.trim(), (await worker.recognize(png(binarizar(prep)))).data.text.trim()];
+      texto[z.campo] = leidos.join(' / ');
     }
     expect(texto.nombre?.toLowerCase()).toContain('mariana');
     expect(primero(texto)).toBe('Hernández Ruiz Mariana');

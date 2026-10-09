@@ -6,7 +6,7 @@ import { createWorker, OEM, PSM, type Worker } from 'tesseract.js';
 import { getLayout, marcoHoja, type Formato } from '../layout/sheetLayout';
 import { miniaturaJpeg } from '../lib/imagen';
 import type { GrayImage } from '../omr/reader';
-import { prepararParaOCR, recortar, tieneEscritura, zonasManuscritas, type TextoManuscrito } from './manuscrito';
+import { binarizar, prepararParaOCR, recortar, tieneEscritura, zonasManuscritas, type TextoManuscrito } from './manuscrito';
 
 let worker: Promise<Worker> | null = null;
 
@@ -75,8 +75,16 @@ export async function leerManuscrito(hoja: GrayImage, formato: Formato): Promise
   for (const z of zonas) {
     const img = recortar(hoja, z.rect);
     if (!tieneEscritura(img)) continue;
-    const { data } = await w.recognize(aCanvas(prepararParaOCR(img)));
-    texto[z.campo] = data.text.replace(/\s+/g, ' ').trim();
+    const preparada = prepararParaOCR(img);
+    // El nombre se lee dos veces (contraste normal y blanco y negro): cada versión
+    // acierta letras distintas y la búsqueda en la lista usa lo de ambas.
+    const variantes = z.campo === 'nombre' ? [preparada, binarizar(preparada)] : [preparada];
+    const leidos: string[] = [];
+    for (const v of variantes) {
+      const t = (await w.recognize(aCanvas(v))).data.text.replace(/\s+/g, ' ').trim();
+      if (t && !leidos.includes(t)) leidos.push(t);
+    }
+    if (leidos.length) texto[z.campo] = leidos.join(' / ');
   }
   return { texto, recorte };
 }
