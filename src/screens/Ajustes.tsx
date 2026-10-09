@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Screen, { btn } from '../components/Screen';
-import { useActualizacion } from '../lib/actualizacion';
+import { forzarActualizacion, revisarActualizacion, useActualizacion } from '../lib/actualizacion';
 import { config } from '../config';
 import { enmascarar } from '../license/licenseService';
 import { useLicencia } from '../license/licenseStore';
@@ -14,23 +14,27 @@ export default function Ajustes() {
   const hayNueva = useActualizacion((s) => s.hayNueva);
   const [buscando, setBuscando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [nueva, setNueva] = useState(false);
+
+  function actualizarAhora() {
+    if (sesion?.hojas.length && !confirm('Al actualizar se cierra la sesión de calificación abierta (exporta antes el Excel si lo necesitas). ¿Actualizar ahora?')) return;
+    if (hayNueva) useActualizacion.getState().aplicar();
+    else forzarActualizacion();
+  }
 
   async function buscarActualizacion() {
     setBuscando(true);
     setMensaje('');
     try {
-      const reg = await navigator.serviceWorker?.getRegistration();
-      await reg?.update();
-      // Si hay versión nueva, el aviso de abajo aparece en unos segundos al terminar de descargarla.
-      await new Promise((r) => setTimeout(r, 1500));
-      if (!useActualizacion.getState().hayNueva && !reg?.installing && !reg?.waiting) setMensaje('Ya tienes la versión más reciente.');
-      else if (!useActualizacion.getState().hayNueva) setMensaje('Descargando la versión nueva… en un momento aparece el aviso para actualizar.');
-    } catch {
-      setMensaje('No se pudo buscar: revisa tu conexión a internet.');
+      const r = await revisarActualizacion();
+      if (r === 'sin-conexion') setMensaje('No se pudo consultar la versión publicada. Revisa tu conexión a internet.');
+      else if (r === 'al-dia') setMensaje('Ya tienes la versión más reciente.');
+      else setNueva(true);
     } finally {
       setBuscando(false);
     }
   }
+
 
   async function onDesactivar() {
     const aviso = sesion?.hojas.length ? `\n\nTienes una sesión abierta con ${sesion.hojas.length} hoja(s); se perderá si no la exportas.` : '';
@@ -72,9 +76,13 @@ export default function Ajustes() {
       <section className="mt-4 rounded-2xl bg-white p-4 text-sm text-slate-600 shadow-sm">
         <h2 className="mb-2 font-semibold text-slate-800">Versión</h2>
         <p className="font-mono" data-testid="version">{__APP_VERSION__}</p>
-        <button onClick={buscarActualizacion} disabled={buscando} className={`${btn.secondary} mt-3 w-full text-sm`}>
-          {buscando ? 'Buscando…' : hayNueva ? 'Hay una versión nueva: toca «Actualizar» abajo' : 'Buscar actualización'}
-        </button>
+        {nueva || hayNueva ? (
+          <button onClick={actualizarAhora} className={`${btn.primary} mt-3 w-full text-sm`}>Hay una versión nueva: actualizar ahora</button>
+        ) : (
+          <button onClick={buscarActualizacion} disabled={buscando} className={`${btn.secondary} mt-3 w-full text-sm`}>
+            {buscando ? 'Buscando…' : 'Buscar actualización'}
+          </button>
+        )}
         {mensaje && <p className="mt-2 text-xs text-slate-500">{mensaje}</p>}
       </section>
     </Screen>
