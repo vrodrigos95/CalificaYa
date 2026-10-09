@@ -95,6 +95,8 @@ Las claves quedan guardadas en tu celular para siempre (hasta que las borres).
 
 Arriba verás cuántas hojas llevas.
 
+**Si cargaste la lista de alumnos:** debajo de la barra azul aparece **“#3 ¿Es Mariana Hernández? ✓ ✗”** cuando la app reconoce lo que el alumno escribió en Nombre. Toca **✓** mientras colocas la siguiente hoja y ese alumno queda asignado; **✗** si no es. Lo que no confirmes aquí lo puedes confirmar después en Revisar.
+
 **Consejos para que lea rápido:**
 - Buena luz, sin reflejos fuertes.
 - Que tu mano o el celular no tapen la hoja con su sombra.

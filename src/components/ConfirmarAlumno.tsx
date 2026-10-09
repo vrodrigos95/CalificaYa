@@ -27,6 +27,11 @@ export default function ConfirmarAlumno({ hoja, sesion, compacto = false }: Prop
     <div className={`rounded-xl ${principal ? 'bg-blue-50' : 'bg-slate-50'} p-2`}>
       {m.recorte && <img src={m.recorte} alt="Lo que escribió el alumno" className="w-full rounded-lg border border-slate-200 bg-white" />}
       {m.estado === 'leyendo' && <p className="mt-1 text-xs text-slate-500">Leyendo lo escrito…</p>}
+      {!compacto && m.estado === 'listo' && (
+        <p className="mt-1 text-xs text-slate-500" data-testid="leido">
+          La app leyó: {Object.values(m.texto).filter(Boolean).map((t) => `«${t}»`).join(' · ') || 'nada legible'}
+        </p>
+      )}
       {principal ? (
         <div className="mt-2">
           <div className="flex items-center gap-2">

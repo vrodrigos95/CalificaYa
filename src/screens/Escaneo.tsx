@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router';
+import BandejaConfirmar from '../components/BandejaConfirmar';
 import Scanner from '../components/Scanner';
 import { textoAlerta } from '../grading/grade';
 import { useGuardSesion } from '../hooks/useGuardSesion';
@@ -78,6 +79,7 @@ export default function Escaneo() {
           {exportando ? 'Generando…' : 'Exportar Excel'}
         </button>
       </header>
+      <BandejaConfirmar sesion={sesion} />
 
       <div className="relative flex-1">
         <Scanner onCaptura={onCaptura} pausado={!!aviso}>

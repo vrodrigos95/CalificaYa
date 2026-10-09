@@ -64,6 +64,25 @@ export function prepararParaOCR(img: GrayImage, escala = 2): GrayImage {
   return { data, width: W, height: H, ppm: img.ppm * escala };
 }
 
+/** Versión en blanco y negro puro (umbral de Otsu): a veces el OCR lee mejor así la letra tenue. */
+export function binarizar(img: GrayImage): GrayImage {
+  const hist = new Array(256).fill(0);
+  for (const v of img.data) hist[v]++;
+  const total = img.data.length;
+  let suma = 0;
+  for (let v = 0; v < 256; v++) suma += v * hist[v];
+  let sumB = 0, wB = 0, mejor = 0, umbral = 128;
+  for (let v = 0; v < 256; v++) {
+    wB += hist[v];
+    if (!wB || wB === total) continue;
+    sumB += v * hist[v];
+    const mB = sumB / wB, mF = (suma - sumB) / (total - wB);
+    const entre = wB * (total - wB) * (mB - mF) ** 2;
+    if (entre > mejor) { mejor = entre; umbral = v; }
+  }
+  return { ...img, data: img.data.map((v) => (v <= umbral ? 0 : 255)) };
+}
+
 /** ¿El recuadro tiene algo escrito? (evita correr el OCR sobre recuadros vacíos). */
 export function tieneEscritura(img: GrayImage): boolean {
   let papel = 0;
@@ -106,6 +125,23 @@ function parecido(leida: string, nombre: string): number {
   return 1 - distancia(leida, nombre) / Math.max(leida.length, nombre.length);
 }
 
+/**
+ * Parecido de una palabra del nombre con el mejor tramo de un texto sin
+ * espacios (el OCR de letra a mano suele pegar o partir palabras:
+ * "MarianaHernandez", "Her nandez"). Distancia de edición semi-global.
+ */
+function parecidoEnTexto(nombre: string, texto: string): number {
+  if (!texto) return 0;
+  let prev = new Array(texto.length + 1).fill(0); // empezar en cualquier punto del texto
+  for (let i = 1; i <= nombre.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= texto.length; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (nombre[i - 1] === texto[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return 1 - Math.min(...prev) / nombre.length;
+}
+
 export interface Sugerencia { alumno: Alumno; puntaje: number; motivo: 'numero' | 'codigo' | 'nombre' }
 
 /**
@@ -123,6 +159,8 @@ export function sugerirAlumnos(texto: TextoManuscrito, alumnos: Alumno[] | null 
   const numerosNombre = delNombre.filter((p) => /^\d+$/.test(p)).map((p) => p.replace(/^0+(?=\d)/, ''));
   const codigos = todas.filter((p) => /^\d{4,}$/.test(p));
   const letras = todas.filter((p) => /^[a-zñ]{2,}$/.test(p));
+  // Lo leído en cada recuadro, sin espacios ni números, para buscar palabras pegadas o partidas.
+  const corridos = [texto.nombre, texto.grupo, texto.fecha].map((t) => palabras(t ?? '').filter((p) => !/\d/.test(p)).join(''));
 
   const out: Sugerencia[] = [];
   for (const a of alumnos) {
@@ -130,7 +168,10 @@ export function sugerirAlumnos(texto: TextoManuscrito, alumnos: Alumno[] | null 
     if (a.lista && numerosNombre.includes(a.lista)) { out.push({ alumno: a, puntaje: 2.5, motivo: 'numero' }); continue; }
     let puntaje = 0;
     for (const n of palabras(a.completo).filter((p) => p.length >= 2 && !/\d/.test(p))) {
-      const mejor = Math.max(0, ...letras.map((l) => parecido(l, n)));
+      let mejor = Math.max(0, ...letras.map((l) => parecido(l, n)));
+      // Palabras pegadas o partidas: solo para palabras de 4+ letras y con menos peso
+      // (si no, "Ana" se encontraría dentro de "Mariana").
+      if (mejor < 0.75 && n.length >= 4) mejor = Math.max(mejor, 0.85 * Math.max(...corridos.map((c) => parecidoEnTexto(n, c))));
       if (mejor >= (n.length >= 6 ? 0.6 : 0.7)) puntaje += mejor;
     }
     if (puntaje >= 0.7) out.push({ alumno: a, puntaje, motivo: 'nombre' });
