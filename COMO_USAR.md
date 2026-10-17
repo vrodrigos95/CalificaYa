@@ -36,11 +36,11 @@ No necesitas saber de computación. Sigue los pasos en orden.
 
 ## Paso 2. Activar tu licencia (solo una vez)
 
-1. Abre CalificaYa.
-2. Escribe o pega tu **código de licencia**. Lo encuentras en el correo de compra de Gumroad. Cópialo completo, con los guiones.
+1. Abre CalificaYa y entra a **⚙️ Ajustes → Activar licencia**.
+2. Escribe o pega tu **clave de licencia**: la de CalificaYa o la de tu **Pase Maestro**. La encuentras en el correo de compra de Gumroad. Cópiala completa, con los guiones.
 3. Toca **Activar**.
 
-Puedes activar tu licencia hasta en **3 dispositivos**. Si cambias de celular y ya no te deja, escribe a soporte.
+Puedes activar tu clave hasta en **3 dispositivos**. Si cambias de celular, en el celular viejo entra a **Ajustes → Desactivar en este dispositivo** para liberar su lugar. Si ya no lo tienes, escribe a soporte.
 
 ---
 
@@ -155,13 +155,13 @@ Puedes abrirlo en Excel, Google Sheets o enviarlo por correo o WhatsApp.
 ## Preguntas frecuentes
 
 **¿Necesito internet para calificar?**
-No. Solo para instalar y activar la primera vez. Cada mes, cuando tengas internet, la app revisa tu licencia sola, sin que hagas nada.
+No. Solo para instalar y activar la primera vez. Cuando tengas internet, la app revisa tu licencia sola una vez al día, sin que hagas nada. Sin internet funciona hasta 7 días seguidos.
 
 **¿Cómo se actualiza la app?**
 Cuando hay una versión nueva, aparece abajo la barra **“Hay una versión nueva de CalificaYa”**. Toca **Actualizar** cuando no estés calificando (si tienes una sesión abierta, primero exporta el Excel). En **⚙️ Ajustes → Versión** ves qué versión tienes y puedes tocar **Buscar actualización**.
 
 **Me salió “Conéctate para verificar tu licencia”.**
-Pasaron muchos días sin internet. Conéctate a wifi o datos un momento y toca **Reintentar**.
+Pasaron más de 7 días sin internet. Conéctate a wifi o datos un momento y toca **Reintentar**.
 
 **No lee la hoja.**
 Revisa que se vean los 4 cuadros negros de las esquinas, que haya buena luz y que la hoja no esté arrugada. También puedes tocar **🖼️ Foto** y elegir una foto que ya hayas tomado.
@@ -170,7 +170,7 @@ Revisa que se vean los 4 cuadros negros de las esquinas, que haya buena luz y qu
 La app lo marca como **dudosa** para que lo revises en el Paso 6.
 
 **Borré los datos del navegador y me pide activar otra vez.**
-Es normal: vuelve a escribir tu código. Cuenta como un dispositivo más.
+Es normal: vuelve a escribir tu clave. Cuenta como un dispositivo más; si llegas al límite, libera uno desde **Ajustes** en otro dispositivo o escribe a soporte.
 
 **¿Mis alumnos y sus calificaciones se suben a internet?**
 No. Todo se queda en tu celular, y al cerrar la sesión se borra. Lo único que se envía es tu código de licencia, para comprobar que es válido.

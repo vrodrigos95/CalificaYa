@@ -1,16 +1,21 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import Screen, { btn } from '../components/Screen';
 import { forzarActualizacion, revisarActualizacion, useActualizacion } from '../lib/actualizacion';
 import { config } from '../config';
 import { enmascarar } from '../license/licenseService';
 import { useLicencia } from '../license/licenseStore';
+import { MENSAJES, type MensajeLicencia } from '../license/mensajes';
 import { useSesion } from '../session/sessionStore';
+import { Aviso } from './Activacion';
 
-const fecha = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
+const fecha = (iso?: string | null) => (iso ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
 
 export default function Ajustes() {
-  const { licencia, omitida, desactivar } = useLicencia();
+  const { licencia, omitida, desactivar, aviso } = useLicencia();
   const sesion = useSesion((s) => s.sesion);
+  const [error, setError] = useState<MensajeLicencia | null>(null);
+  const [liberando, setLiberando] = useState(false);
   const hayNueva = useActualizacion((s) => s.hayNueva);
   const [buscando, setBuscando] = useState(false);
   const [mensaje, setMensaje] = useState('');
@@ -35,37 +40,66 @@ export default function Ajustes() {
     }
   }
 
-
   async function onDesactivar() {
-    const aviso = sesion?.hojas.length ? `\n\nTienes una sesión abierta con ${sesion.hojas.length} hoja(s); se perderá si no la exportas.` : '';
-    if (!confirm(`¿Desactivar CalificaYa en este dispositivo?\n\nPara volver a usarla tendrás que activarla de nuevo, y eso cuenta como un uso nuevo de tu licencia (máximo ${config.maxActivaciones} dispositivos).${aviso}`)) return;
-    useSesion.getState().cerrar();
-    await desactivar();
+    // Solo si la licencia es obligatoria la app se cierra al desactivar.
+    const pierdeSesion = config.licencia.obligatoria && sesion?.hojas.length;
+    const extra = pierdeSesion ? `\n\nTienes una sesión abierta con ${sesion.hojas.length} hoja(s); se perderá si no la exportas.` : '';
+    if (!confirm(`¿Desactivar la licencia en este dispositivo?\n\nEsto libera su lugar (máximo ${config.maxDispositivos} dispositivos por clave) para que puedas activarla en otro.${extra}`)) return;
+    setLiberando(true);
+    setError(null);
+    try {
+      const r = await desactivar();
+      if (!r.ok) setError(MENSAJES[r.motivo]);
+      else if (config.licencia.obligatoria) useSesion.getState().cerrar();
+    } finally {
+      setLiberando(false);
+    }
   }
 
   return (
     <Screen title="Ajustes" back="/">
       <section className="rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="mb-3 font-semibold text-slate-800">Licencia</h2>
+        {aviso && !licencia && <div className="mb-3"><Aviso mensaje={MENSAJES[aviso]} tono="red" /></div>}
         {omitida ? (
           <p className="text-sm text-slate-600">Modo desarrollo en este equipo: la licencia no se solicita.</p>
         ) : licencia ? (
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-            <dt className="text-slate-500">Código</dt>
+            <dt className="text-slate-500">Clave</dt>
             <dd className="font-mono text-slate-900" data-testid="licencia">{enmascarar(licencia.codigo)}</dd>
+            <dt className="text-slate-500">Tipo</dt>
+            <dd>{licencia.tipo === 'pase' ? 'Pase Maestro' : 'CalificaYa'}</dd>
+            {licencia.vigenteHasta && (
+              <>
+                <dt className="text-slate-500">Vigente hasta</dt>
+                <dd>{fecha(licencia.vigenteHasta)}</dd>
+              </>
+            )}
             <dt className="text-slate-500">Activada</dt>
             <dd>{fecha(licencia.activadaEn)}</dd>
             <dt className="text-slate-500">Última verificación</dt>
             <dd>{fecha(licencia.ultimaVerificacion)}</dd>
+            {licencia.dispositivosUsados !== undefined && (
+              <>
+                <dt className="text-slate-500">Dispositivos</dt>
+                <dd>{licencia.dispositivosUsados} de {config.maxDispositivos}</dd>
+              </>
+            )}
           </dl>
         ) : (
-          <p className="text-sm text-slate-600">Sin licencia.</p>
+          <div className="space-y-3 text-sm text-slate-600">
+            <p>{config.licencia.obligatoria ? 'Sin licencia.' : 'CalificaYa es gratis por ahora. Si ya tienes la clave de CalificaYa o del Pase Maestro, puedes activarla desde ya.'}</p>
+            <Link to="/activar" className={`${btn.primary} block text-center`}>Activar licencia</Link>
+          </div>
         )}
         {!omitida && licencia && (
-          <button onClick={onDesactivar} className={`${btn.danger} mt-4 w-full`}>Desactivar en este dispositivo</button>
+          <button onClick={onDesactivar} disabled={liberando} className={`${btn.danger} mt-4 w-full`}>
+            {liberando ? 'Liberando…' : 'Desactivar en este dispositivo'}
+          </button>
         )}
+        {error && <div className="mt-3"><Aviso mensaje={error} /></div>}
         <p className="mt-3 text-xs text-slate-500">
-          La licencia se verifica con Gumroad cada {config.diasRevalidacion} días cuando hay internet. Sin conexión la app sigue funcionando.
+          Con internet, la licencia se verifica al abrir la app una vez al día. Sin conexión la app sigue funcionando hasta {config.diasSinConexion} días.
           Soporte: <a href={`mailto:${config.supportEmail}`} className="underline">{config.supportEmail}</a>
         </p>
       </section>

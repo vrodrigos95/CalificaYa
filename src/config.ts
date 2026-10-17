@@ -15,21 +15,26 @@ export const LICENCIA_DE_PRUEBA = 'PRUEBA-0000-0000-0000';
 
 export const config = {
   appName: APP_NAME,
-  gumroad: {
-    /** Valor de prueba hasta crear el producto en Gumroad. */
-    productId: env.VITE_GUMROAD_PRODUCT_ID || 'PRODUCTO_DE_PRUEBA',
-    purchaseUrl: env.VITE_GUMROAD_PURCHASE_URL || 'https://gumroad.com/l/calificaya',
+  licencia: {
+    /** Endpoint central de licencias de trucosdeaula.com (acepta la clave de CalificaYa o la del Pase Maestro). */
+    url: env.VITE_LICENCIA_URL || 'https://trucosdeaula.com/api/licencia.php',
+    /** Comprar CalificaYa suelta. */
+    compraUrl: env.VITE_COMPRA_URL || 'PLACEHOLDER_URL_CALIFICAYA',
+    /** Comprar o renovar el Pase Maestro. */
+    paseUrl: env.VITE_PASE_URL || 'PLACEHOLDER_URL_PASE',
     /**
-     * Dirección para validar licencias. Vacío = directo a la API de Gumroad.
-     * Si el navegador bloqueara la llamada directa (CORS), poner
-     * /.netlify/functions/verificar-licencia (ver netlify/functions/).
+     * false (por ahora): CalificaYa es gratis y la licencia es opcional (se activa en Ajustes).
+     * true: sin licencia activa se muestra la pantalla de activación.
      */
-    verifyUrl: env.VITE_LICENCIA_URL || undefined,
+    obligatoria: env.VITE_LICENCIA_OBLIGATORIA === 'true',
   },
   supportEmail: env.VITE_SUPPORT_EMAIL || 'soporte@ejemplo.com',
-  maxActivaciones: num(env.VITE_MAX_ACTIVACIONES, 3),
-  diasRevalidacion: num(env.VITE_DIAS_REVALIDACION, 30),
-  diasGracia: num(env.VITE_DIAS_GRACIA, 45),
+  /** Solo para los mensajes: el límite real lo decide el servidor. */
+  maxDispositivos: num(env.VITE_MAX_DISPOSITIVOS, 3),
+  /** Al abrir la app se vuelve a verificar si pasaron más de estas horas. */
+  horasRevalidacion: num(env.VITE_HORAS_REVALIDACION, 24),
+  /** Sin internet se puede usar hasta estos días desde la última verificación válida. */
+  diasSinConexion: num(env.VITE_DIAS_SIN_CONEXION, 7),
   /**
    * Código personal que activa la app sin Gumroad (opcional, se define al
    * compilar). Útil para usarla tú mismo antes de configurar Gumroad.

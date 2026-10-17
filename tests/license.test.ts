@@ -1,92 +1,117 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { EstadoLicencia } from '../src/db/db';
-import { verificarLicencia, type Verificacion } from '../src/license/gumroad';
-import { activar, enmascarar, evaluar, revalidar, usarGracia, type Dependencias } from '../src/license/licenseService';
+import { idDispositivo } from '../src/license/dispositivo';
+import { activar, desactivar, enmascarar, evaluar, revalidar, type Dependencias } from '../src/license/licenseService';
+import { liberarDispositivo, verificarLicencia, type Liberacion, type Verificacion } from '../src/license/servidor';
 
-// ---------------------------------------------------------------- Gumroad simulado
+// ---------------------------------------------------------------- Servidor simulado
 function respuesta(status: number, cuerpo: unknown): typeof fetch {
   return vi.fn(async () => new Response(JSON.stringify(cuerpo), { status, headers: { 'Content-Type': 'application/json' } })) as unknown as typeof fetch;
 }
-const compra = (extra: Record<string, unknown> = {}) => ({ refunded: false, chargebacked: false, disputed: false, email: 'docente@ejemplo.com', ...extra });
-const ok = (uses: number, extra?: Record<string, unknown>) => respuesta(200, { success: true, uses, purchase: compra(extra) });
 const sinInternet = (vi.fn(async () => { throw new TypeError('Failed to fetch'); }) as unknown) as typeof fetch;
+const URL_LICENCIA = 'https://trucosdeaula.com/api/licencia.php';
+const rechazo = (motivo: string, status = 200) => respuesta(status, { valida: false, tipo: null, vigenteHasta: null, dispositivosUsados: null, motivo });
 
-describe('gumroad.ts: interpretación de respuestas', () => {
-  const v = (f: typeof fetch) => verificarLicencia('ABCD-1234', { productId: 'prod', incrementar: false, fetch: f });
+describe('servidor.ts: interpretación de respuestas', () => {
+  const v = (f: typeof fetch) => verificarLicencia('ABCD-1234', 'disp-0001', { url: URL_LICENCIA, fetch: f });
 
-  it('envía product_id, license_key e increment_uses_count por POST', async () => {
-    const f = ok(1);
-    await verificarLicencia(' ABCD-1234 ', { productId: 'prod', incrementar: true, fetch: f });
+  it('envía accion, app, licenseKey y deviceId por POST en JSON', async () => {
+    const f = respuesta(200, { valida: true, tipo: 'app', vigenteHasta: null, dispositivosUsados: 1, motivo: null });
+    await verificarLicencia(' ABCD-1234 ', 'disp-0001', { url: URL_LICENCIA, fetch: f });
     const [url, init] = (f as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(url).toBe('https://api.gumroad.com/v2/licenses/verify');
+    expect(url).toBe(URL_LICENCIA);
     expect(init.method).toBe('POST');
-    expect(Object.fromEntries(new URLSearchParams(init.body))).toEqual({ product_id: 'prod', license_key: 'ABCD-1234', increment_uses_count: 'true' });
+    expect(JSON.parse(init.body)).toEqual({ accion: 'verificar', app: 'calificaya', licenseKey: 'ABCD-1234', deviceId: 'disp-0001' });
   });
-  it('licencia válida', async () => expect(await v(ok(2))).toEqual({ tipo: 'valida', usos: 2 }));
-  it('licencia inválida (404, success: false)', async () =>
-    expect(await v(respuesta(404, { success: false, message: 'That license does not exist for the provided product.' }))).toMatchObject({ tipo: 'invalida' }));
-  it('compra reembolsada', async () => expect(await v(ok(1, { refunded: true }))).toEqual({ tipo: 'reembolsada' }));
-  it('compra con contracargo', async () => expect(await v(ok(1, { chargebacked: true }))).toEqual({ tipo: 'contracargo' }));
-  it('compra en disputa', async () => expect(await v(ok(1, { disputed: true }))).toEqual({ tipo: 'disputa' }));
-  it('sin internet', async () => expect(await v(sinInternet)).toEqual({ tipo: 'error-red' }));
-  it('error 500 de Gumroad', async () => expect(await v(respuesta(500, { error: 'boom' }))).toEqual({ tipo: 'error-servidor', status: 500 }));
+  it('clave de CalificaYa válida', async () =>
+    expect(await v(respuesta(200, { valida: true, tipo: 'app', vigenteHasta: null, dispositivosUsados: 2, motivo: null })))
+      .toEqual({ tipo: 'valida', licencia: 'app', vigenteHasta: null, dispositivosUsados: 2 }));
+  it('Pase Maestro cancelado con fecha futura: válido con vigenteHasta', async () =>
+    expect(await v(respuesta(200, { valida: true, tipo: 'pase', vigenteHasta: '2026-11-30', dispositivosUsados: 1, motivo: null })))
+      .toEqual({ tipo: 'valida', licencia: 'pase', vigenteHasta: '2026-11-30', dispositivosUsados: 1 }));
+  it.each(['clave_invalida', 'reembolsada', 'contracargo', 'disputa', 'pago_fallido', 'pase_vencido', 'limite_dispositivos'])('rechazo definitivo: %s', async (m) =>
+    expect(await v(rechazo(m))).toEqual({ tipo: 'rechazada', motivo: m }));
+  it('datos_invalidos (clave mal escrita) cuenta como clave inválida', async () =>
+    expect(await v(rechazo('datos_invalidos', 400))).toEqual({ tipo: 'rechazada', motivo: 'clave_invalida' }));
+  it('Gumroad caído (503) es temporal', async () =>
+    expect(await v(rechazo('gumroad_no_disponible', 503))).toEqual({ tipo: 'temporal', motivo: 'gumroad_no_disponible' }));
+  it('demasiados intentos (429) es temporal', async () =>
+    expect(await v(rechazo('demasiados_intentos', 429))).toEqual({ tipo: 'temporal', motivo: 'demasiados_intentos' }));
+  it('sin internet', async () => expect(await v(sinInternet)).toEqual({ tipo: 'temporal', motivo: 'sin_conexion' }));
   it('respuesta que no es JSON', async () => {
-    const f = (vi.fn(async () => new Response('<html>', { status: 200 })) as unknown) as typeof fetch;
-    expect(await v(f)).toMatchObject({ tipo: 'error-servidor' });
+    const f = (vi.fn(async () => new Response('<html>', { status: 502 })) as unknown) as typeof fetch;
+    expect(await v(f)).toEqual({ tipo: 'temporal', motivo: 'error_servidor' });
   });
+  it('liberar envía accion, licenseKey y deviceId', async () => {
+    const f = respuesta(200, { liberado: true, motivo: null });
+    expect(await liberarDispositivo('ABCD-1234', 'disp-0001', { url: URL_LICENCIA, fetch: f })).toEqual({ ok: true });
+    const [, init] = (f as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({ accion: 'liberar', licenseKey: 'ABCD-1234', deviceId: 'disp-0001' });
+  });
+  it('liberar sin internet no se da por hecho', async () =>
+    expect(await liberarDispositivo('ABCD-1234', 'disp-0001', { url: URL_LICENCIA, fetch: sinInternet })).toEqual({ ok: false, motivo: 'sin_conexion' }));
+});
+
+describe('identificador del dispositivo', () => {
+  const almacen = () => {
+    const m = new Map<string, string>();
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+  };
+  it('se crea la primera vez y después siempre es el mismo', () => {
+    const a = almacen();
+    const id = idDispositivo(a);
+    expect(id).toMatch(/^[A-Za-z0-9-]{8,64}$/);
+    expect(idDispositivo(a)).toBe(id);
+  });
+  it('cada dispositivo tiene uno distinto', () => expect(idDispositivo(almacen())).not.toBe(idDispositivo(almacen())));
 });
 
 // ---------------------------------------------------------------- Reglas de la licencia
-function entorno(respuestas: Verificacion[] | ((inc: boolean) => Verificacion), ahora = new Date('2026-10-05T12:00:00Z')) {
+const AHORA = new Date('2026-10-05T12:00:00Z');
+const cfg = { horasRevalidacion: 24, diasSinConexion: 7 };
+const valida = (extra: Partial<Extract<Verificacion, { tipo: 'valida' }>> = {}): Verificacion =>
+  ({ tipo: 'valida', licencia: 'app', vigenteHasta: null, dispositivosUsados: 1, ...extra });
+
+function entorno(respuestas: Verificacion[], liberaciones: Liberacion[] = [], ahora = AHORA) {
   let guardada: EstadoLicencia | undefined;
-  const llamadas: boolean[] = [];
+  const llamadas: string[] = [];
   const d: Dependencias = {
-    verificar: async (_c, inc) => {
-      llamadas.push(inc);
-      return typeof respuestas === 'function' ? respuestas(inc) : respuestas.shift()!;
-    },
+    verificar: async (c) => { llamadas.push('verificar ' + c); return respuestas.shift()!; },
+    liberar: async (c) => { llamadas.push('liberar ' + c); return liberaciones.shift()!; },
     repo: { leer: async () => guardada, guardar: async (l) => { guardada = l; }, borrar: async () => { guardada = undefined; } },
-    config: { maxActivaciones: 3, diasRevalidacion: 30, diasGracia: 45 },
+    config: cfg,
     ahora: () => ahora,
   };
   return { d, llamadas, guardada: () => guardada, poner: (l: EstadoLicencia) => { guardada = l; } };
 }
-const valida = (usos: number): Verificacion => ({ tipo: 'valida', usos });
+
+const lic = (horasAtras: number, extra: Partial<EstadoLicencia> = {}): EstadoLicencia => {
+  const f = new Date(AHORA.getTime() - horasAtras * 3600_000).toISOString();
+  return { id: 'actual', codigo: 'ABCD-1234', activadaEn: f, ultimaVerificacion: f, tipo: 'app', vigenteHasta: null, ...extra };
+};
 
 describe('activación', () => {
-  it('válida: consulta sin gastar uso, luego gasta uno y guarda código y fechas', async () => {
-    const e = entorno([valida(0), valida(1)]);
+  it('válida: guarda la clave, la fecha de verificación y el tipo', async () => {
+    const e = entorno([valida({ licencia: 'pase', dispositivosUsados: 2 })]);
     const r = await activar('  ABCD-1234 ', e.d);
     expect(r.ok).toBe(true);
-    expect(e.llamadas).toEqual([false, true]);
-    expect(e.guardada()).toEqual({ id: 'actual', codigo: 'ABCD-1234', activadaEn: '2026-10-05T12:00:00.000Z', ultimaVerificacion: '2026-10-05T12:00:00.000Z' });
+    expect(e.llamadas).toEqual(['verificar ABCD-1234']);
+    expect(e.guardada()).toEqual({
+      id: 'actual', codigo: 'ABCD-1234', activadaEn: AHORA.toISOString(), ultimaVerificacion: AHORA.toISOString(),
+      tipo: 'pase', vigenteHasta: null, dispositivosUsados: 2,
+    });
   });
   it.each([
-    ['invalida', { tipo: 'invalida' } as Verificacion],
-    ['reembolsada', { tipo: 'reembolsada' } as Verificacion],
-    ['contracargo', { tipo: 'contracargo' } as Verificacion],
-    ['disputa', { tipo: 'disputa' } as Verificacion],
-    ['error-red', { tipo: 'error-red' } as Verificacion],
-    ['error-servidor', { tipo: 'error-servidor', status: 500 } as Verificacion],
-  ])('rechaza: %s (sin gastar usos y sin guardar nada)', async (motivo, v) => {
-    const e = entorno([v]);
-    expect(await activar('X', e.d)).toEqual({ ok: false, motivo });
-    expect(e.llamadas).toEqual([false]);
+    'clave_invalida', 'reembolsada', 'pago_fallido', 'pase_vencido', 'limite_dispositivos',
+  ] as const)('rechazada por %s: no guarda nada', async (motivo) => {
+    const e = entorno([{ tipo: 'rechazada', motivo }]);
+    expect(await activar('X-1234-5678', e.d)).toEqual({ ok: false, motivo });
     expect(e.guardada()).toBeUndefined();
   });
-  it('límite de usos superado: ya en 3 de 3 → rechaza SIN gastar otro uso', async () => {
-    const e = entorno([valida(3)]);
-    expect(await activar('X', e.d)).toEqual({ ok: false, motivo: 'limite' });
-    expect(e.llamadas).toEqual([false]);
-  });
-  it('límite superado al gastar el uso (otro dispositivo se activó al mismo tiempo)', async () => {
-    const e = entorno([valida(2), valida(4)]);
-    expect(await activar('X', e.d)).toEqual({ ok: false, motivo: 'limite' });
+  it.each(['sin_conexion', 'gumroad_no_disponible'] as const)('%s: no da acceso nuevo', async (motivo) => {
+    const e = entorno([{ tipo: 'temporal', motivo }]);
+    expect(await activar('X-1234-5678', e.d)).toEqual({ ok: false, motivo });
     expect(e.guardada()).toBeUndefined();
-  });
-  it('el tercer dispositivo sí entra (usos = 3 después de gastar)', async () => {
-    const e = entorno([valida(2), valida(3)]);
-    expect((await activar('X', e.d)).ok).toBe(true);
   });
   it('código vacío', async () => expect(await activar('   ', entorno([]).d)).toEqual({ ok: false, motivo: 'vacia' }));
   it('código de prueba (solo se configura en desarrollo): no usa la red', async () => {
@@ -97,58 +122,57 @@ describe('activación', () => {
   });
 });
 
-describe('al abrir la app y revalidación', () => {
-  const cfg = { maxActivaciones: 3, diasRevalidacion: 30, diasGracia: 45 };
-  const lic = (diasAtras: number, extra: Partial<EstadoLicencia> = {}): EstadoLicencia => {
-    const f = new Date(Date.parse('2026-10-05T12:00:00Z') - diasAtras * 86400000).toISOString();
-    return { id: 'actual', codigo: 'ABCD-1234', activadaEn: f, ultimaVerificacion: f, ...extra };
-  };
-  const ahora = new Date('2026-10-05T12:00:00Z');
-
-  it('sin licencia → pantalla de activación (p. ej. tras borrar los datos del navegador)', () =>
-    expect(evaluar(undefined, ahora, cfg)).toEqual({ estado: 'sin-licencia' }));
-  it('verificada hace 10 días → activa, sin revalidar', () =>
-    expect(evaluar(lic(10), ahora, cfg)).toMatchObject({ estado: 'activa', revalidar: false }));
-  it('hace 31 días → activa y se revalida en segundo plano', () =>
-    expect(evaluar(lic(31), ahora, cfg)).toMatchObject({ estado: 'activa', revalidar: true }));
-  it('hace 46 días → pide conexión (con "continuar esta vez" disponible una vez)', () => {
-    expect(evaluar(lic(46), ahora, cfg)).toMatchObject({ estado: 'requiere-conexion', puedeContinuar: true });
-    const l = lic(46);
-    expect(evaluar({ ...l, graciaUsadaPara: l.ultimaVerificacion }, ahora, cfg)).toMatchObject({ puedeContinuar: false });
+describe('al abrir la app', () => {
+  it('sin licencia', () => expect(evaluar(undefined, AHORA, cfg)).toEqual({ estado: 'sin-licencia' }));
+  it('verificada hace 23 h → activa, sin volver a verificar', () =>
+    expect(evaluar(lic(23), AHORA, cfg)).toMatchObject({ estado: 'activa', revalidar: false }));
+  it('verificada hace 25 h → activa y se verifica en segundo plano', () =>
+    expect(evaluar(lic(25), AHORA, cfg)).toMatchObject({ estado: 'activa', revalidar: true }));
+  it('sin internet dentro de 7 días (6 días y 23 h) → se puede usar', () =>
+    expect(evaluar(lic(6 * 24 + 23), AHORA, cfg)).toMatchObject({ estado: 'activa' }));
+  it('sin internet más de 7 días → pide conexión', () =>
+    expect(evaluar(lic(7 * 24 + 1), AHORA, cfg)).toMatchObject({ estado: 'requiere-conexion' }));
+  it('pase cancelado: antes de vigenteHasta se usa; desde ese día pide conexión', () => {
+    expect(evaluar(lic(1, { tipo: 'pase', vigenteHasta: '2026-10-20' }), AHORA, cfg)).toMatchObject({ estado: 'activa' });
+    expect(evaluar(lic(1, { tipo: 'pase', vigenteHasta: '2026-10-05' }), AHORA, cfg)).toMatchObject({ estado: 'requiere-conexion' });
   });
+});
 
-  it('revalidación válida: actualiza la fecha y NO gasta usos', async () => {
-    const e = entorno([valida(2)]);
-    expect(await revalidar(lic(31), e.d)).toBe('activa');
-    expect(e.llamadas).toEqual([false]);
-    expect(e.guardada()?.ultimaVerificacion).toBe(ahora.toISOString());
+describe('verificar de nuevo', () => {
+  it('válida: actualiza la fecha y los datos del pase', async () => {
+    const e = entorno([valida({ licencia: 'pase', vigenteHasta: '2026-12-01', dispositivosUsados: 2 })]);
+    const r = await revalidar(lic(30), e.d);
+    expect(r.resultado).toBe('activa');
+    expect(e.guardada()).toMatchObject({ ultimaVerificacion: AHORA.toISOString(), tipo: 'pase', vigenteHasta: '2026-12-01', dispositivosUsados: 2 });
   });
-  it.each(['reembolsada', 'contracargo', 'invalida'] as const)('revalidación %s → desactiva la app', async (tipo) => {
-    const e = entorno([{ tipo } as Verificacion]);
-    e.poner(lic(31));
-    expect(await revalidar(lic(31), e.d)).toBe('desactivada');
+  it.each(['reembolsada', 'pase_vencido', 'pago_fallido', 'limite_dispositivos'] as const)('%s → se quita la licencia de este dispositivo', async (motivo) => {
+    const e = entorno([{ tipo: 'rechazada', motivo }]);
+    e.poner(lic(30));
+    expect(await revalidar(lic(30), e.d)).toEqual({ resultado: 'desactivada', motivo });
     expect(e.guardada()).toBeUndefined();
   });
-  it('revalidación sin internet → no bloquea (la app sigue funcionando)', async () => {
-    const e = entorno([{ tipo: 'error-red' }]);
-    e.poner(lic(31));
-    expect(await revalidar(lic(31), e.d)).toBe('sin-conexion');
-    expect(e.guardada()).toBeDefined();
+  it.each(['sin_conexion', 'gumroad_no_disponible', 'error_servidor'] as const)('%s → no bloquea ni borra (cuentan los 7 días)', async (motivo) => {
+    const e = entorno([{ tipo: 'temporal', motivo }]);
+    e.poner(lic(30));
+    expect(await revalidar(lic(30), e.d)).toEqual({ resultado: 'sin-verificar', motivo });
+    expect(e.guardada()).toEqual(lic(30));
   });
-  it('revalidación con error 500 → no bloquea a quien ya estaba activado', async () => {
-    const e = entorno([{ tipo: 'error-servidor', status: 500 }]);
-    e.poner(lic(50));
-    expect(await revalidar(lic(50), e.d)).toBe('error-servidor');
-    expect(e.guardada()).toBeDefined();
-  });
-  it('"continuar esta vez" solo una vez por periodo vencido', async () => {
-    const e = entorno([]);
-    const l = await usarGracia(lic(46), e.d);
-    expect(evaluar(l, ahora, cfg)).toMatchObject({ estado: 'requiere-conexion', puedeContinuar: false });
-    // Al revalidar con éxito se reinicia todo
-    const e2 = entorno([valida(1)]);
-    await revalidar(l, e2.d);
-    expect(evaluar(e2.guardada(), ahora, cfg)).toMatchObject({ estado: 'activa', revalidar: false });
-  });
-  it('enmascara la licencia (solo últimos 4)', () => expect(enmascarar('ABCD1234-EFGH5678')).toBe('••••••••••••5678'));
 });
+
+describe('desactivar en este dispositivo', () => {
+  it('libera el lugar en el servidor y borra la licencia local', async () => {
+    const e = entorno([], [{ ok: true }]);
+    e.poner(lic(1));
+    expect(await desactivar(lic(1), e.d)).toEqual({ ok: true });
+    expect(e.llamadas).toEqual(['liberar ABCD-1234']);
+    expect(e.guardada()).toBeUndefined();
+  });
+  it('sin internet: no se borra (el lugar seguiría ocupado en el servidor)', async () => {
+    const e = entorno([], [{ ok: false, motivo: 'sin_conexion' }]);
+    e.poner(lic(1));
+    expect(await desactivar(lic(1), e.d)).toEqual({ ok: false, motivo: 'sin_conexion' });
+    expect(e.guardada()).toBeDefined();
+  });
+});
+
+it('enmascara la licencia (solo últimos 4)', () => expect(enmascarar('ABCD1234-EFGH5678')).toBe('••••••••••••5678'));

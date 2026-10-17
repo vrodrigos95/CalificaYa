@@ -34,9 +34,10 @@ jobs:
         env:
           # La app vive en https://<usuario>.github.io/<repositorio>/
           VITE_BASE: /${{ github.event.repository.name }}/
-          # Valores de Gumroad (Settings → Secrets and variables → Actions → Variables)
-          VITE_GUMROAD_PRODUCT_ID: ${{ vars.VITE_GUMROAD_PRODUCT_ID }}
-          VITE_GUMROAD_PURCHASE_URL: ${{ vars.VITE_GUMROAD_PURCHASE_URL }}
+          # Licencia (Settings → Secrets and variables → Actions → Variables). Ver .env.example.
+          VITE_COMPRA_URL: ${{ vars.VITE_COMPRA_URL }}
+          VITE_PASE_URL: ${{ vars.VITE_PASE_URL }}
+          VITE_LICENCIA_OBLIGATORIA: ${{ vars.VITE_LICENCIA_OBLIGATORIA }}
           VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL }}
           # Código personal para usar la app sin Gumroad (Secrets). Opcional.
           VITE_CODIGO_MAESTRO: ${{ secrets.CODIGO_MAESTRO }}

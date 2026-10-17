@@ -7,9 +7,13 @@ export interface EstadoLicencia {
   id: 'actual';
   codigo: string;
   activadaEn: string;
+  /** Última verificación VÁLIDA con el servidor (ISO). */
   ultimaVerificacion: string;
-  /** Periodo de gracia ya usado (fecha de ultimaVerificacion para la que se usó). */
-  graciaUsadaPara?: string;
+  /** 'app' = CalificaYa suelta, 'pase' = Pase Maestro. */
+  tipo?: 'app' | 'pase';
+  /** Pase cancelado: último día pagado (AAAA-MM-DD). */
+  vigenteHasta?: string | null;
+  dispositivosUsados?: number;
 }
 
 export class CalificaYaDB extends Dexie {
