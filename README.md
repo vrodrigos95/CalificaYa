@@ -64,8 +64,8 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 | `src/grading/` | Calificación de una hoja contra la clave |
 | `src/export/excel.ts` | Exportación a Excel (ExcelJS) con fórmulas |
 | `src/db/` | IndexedDB (Dexie): solo claves y licencia |
-| `src/license/gumroad.ts` | Único módulo que llama a la API de Gumroad |
-| `src/license/licenseService.ts` | Reglas: activación, límite, revalidación y gracia |
+| `src/license/servidor.ts` | Único módulo que llama al servidor de licencias de trucosdeaula.com |
+| `src/license/licenseService.ts` | Reglas: activación, verificación cada 24 h, 7 días sin conexión, desactivar |
 | `src/session/` | Sesión de calificación y lista de alumnos (solo en memoria) |
 | `src/keys/keysJson.ts` | Importar / exportar claves en JSON |
 | `src/components/Scanner.tsx` | Cámara en vivo con captura automática |
@@ -81,25 +81,29 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 - [x] Fase 4: revisión y exportación a Excel
 - [x] Fase 5: PWA sin internet, lista de alumnos, importar/exportar claves
 - [x] Fase 6: licencia con Gumroad
+- [x] Fase 7: licencia con el servidor central de trucosdeaula.com (clave suelta o Pase Maestro)
+- [ ] Pendiente: decidir qué queda gratis sin clave. Por ahora todo es gratis
+  (`VITE_LICENCIA_OBLIGATORIA=false`); al decidirlo, activar el bloqueo correspondiente.
 
-## Licencia (Gumroad)
+## Licencia
 
-- **Activar:** se consulta primero sin gastar un uso (si ya está en el máximo, se
-  rechaza sin gastar otro) y luego con `increment_uses_count=true`.
-- **Revalidar:** cada `VITE_DIAS_REVALIDACION` días (30) en segundo plano, sin gastar
-  usos. Reembolso, contracargo o licencia desactivada → la app vuelve a pedir licencia.
-  Sin internet o con Gumroad caído, quien ya estaba activado sigue usando la app.
-- **Gracia:** a los `VITE_DIAS_GRACIA` días (45) sin verificar, se pide conexión;
-  se puede “continuar esta vez” una sola vez por periodo.
+- **Servidor:** `https://trucosdeaula.com/api/licencia.php` (repositorio TrucosDeAula). Acepta
+  la clave de CalificaYa o la del Pase Maestro; solo responde a trucosdeaula.com y sus
+  subdominios, así que la app tiene que publicarse en `calificaya.trucosdeaula.com`.
+- **Por ahora es opcional:** con `VITE_LICENCIA_OBLIGATORIA=false` nada se bloquea; la clave se
+  activa en Ajustes. Con `true`, sin licencia activa se muestra la pantalla de activación.
+- **Activar:** se genera un identificador aleatorio de dispositivo (se guarda en el navegador) y
+  se manda con la clave. Si es válida se guardan la clave y la fecha de verificación.
+- **Al abrir:** si pasaron más de 24 h se verifica en segundo plano. Sin internet (o con Gumroad
+  caído) se puede usar hasta 7 días desde la última verificación válida; después se pide conexión.
+  Un pase cancelado sirve hasta su `vigenteHasta`.
+- **Rechazos:** clave inválida, reembolso, contracargo, disputa, pago fallido o pase vencido
+  quitan la licencia de este dispositivo con un mensaje claro (y link para renovar el pase).
+- **Límite:** 3 dispositivos por clave. “Desactivar en este dispositivo” (Ajustes) libera el lugar
+  en el servidor; necesita internet.
 - **Desarrollo:** con `npm run dev` en `localhost` la licencia se omite; desde otra
   dirección (p. ej. el celular con `dev:celular`) se acepta `PRUEBA-0000-0000-0000`.
   La versión publicada no acepta ese código.
-- **Liberar un dispositivo (soporte):**
-  `GUMROAD_TOKEN=tu_token node scripts/liberar-uso.mjs <product_id> <licencia>`
-  (el token es tuyo: nunca va en la app ni en el repositorio).
-- Si el navegador bloqueara la llamada directa a Gumroad (CORS), activar la función
-  `netlify/functions/verificar-licencia.mjs` con
-  `VITE_LICENCIA_URL=/.netlify/functions/verificar-licencia`.
 
 ## Hojas de respuesta y licencia
 
