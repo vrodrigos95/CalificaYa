@@ -27,7 +27,49 @@ node scripts/guia-pdf.cjs        # regenera docs/Guia_CalificaYa.pdf desde docs/
 npx tsx scripts/omr-try.ts 50 1   # lee una hoja sintética y guarda test-output/foto.png y hoja.png
 ```
 
+## Publicar (Hostinger)
+
+Destino: **https://calificaya.rsrapps.com**. El flujo `.github/workflows/deploy-hostinger.yml`
+corre en cada push a `main` (incluye cada merge) y se puede lanzar a mano. Hace:
+`npm ci` → `npm test` → `npm run typecheck` → `npm run build` → sube `dist/` por FTPS →
+comprueba que el sitio responda 200 y que un GET a `/api/verificar-licencia.php` responda 405.
+Si algo falla, el job queda en rojo y no se publica (o se avisa si la verificación falla).
+
+**Dónde se cargan:** GitHub → el repositorio → *Settings → Secrets and variables → Actions*,
+pestaña **Secrets** o **Variables** → *New repository secret / variable*.
+
+**Orden:** primero subdominio y SSL en hPanel, luego la cuenta FTP, luego los secretos y
+variables en GitHub y al final el merge (si el flujo corre sin secretos, falla al subir).
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| Secret | `FTP_SERVER` | Servidor FTP de hPanel (*Archivos → Cuentas FTP*), p. ej. `ftp.rsrapps.com` o la IP que muestra |
+| Secret | `FTP_USERNAME` | Usuario de la cuenta FTP (p. ej. `u123456789.calificaya`) |
+| Secret | `FTP_PASSWORD` | Contraseña de esa cuenta FTP |
+| Secret | `FTP_SERVER_DIR` | Carpeta del subdominio vista desde esa cuenta, **terminada en `/`**. Si la cuenta FTP se creó con la carpeta del subdominio como raíz: `./` |
+| Secret | `VITE_CODIGO_MAESTRO` | Opcional. Código personal para usar la app sin Gumroad. Queda dentro del JavaScript publicado: no lo compartas |
+| Variable | `VITE_GUMROAD_PRODUCT_ID` | `product_id` del producto en Gumroad |
+| Variable | `VITE_GUMROAD_PURCHASE_URL` | Enlace de compra en Gumroad |
+| Variable | `VITE_SUPPORT_EMAIL` | Correo de soporte |
+| Variable | `VITE_MAX_ACTIVACIONES` | Opcional (3 si no se define) |
+| Variable | `VITE_DIAS_REVALIDACION` | Opcional (30 si no se define) |
+| Variable | `VITE_DIAS_GRACIA` | Opcional (45 si no se define) |
+
+`VITE_LICENCIA_URL` **no** se define: en producción la app usa `/api/verificar-licencia.php`.
+
+**Lanzar a mano:** *Actions → Publicar en Hostinger → Run workflow* (rama `main`).
+
+**Qué no toca en el servidor:** la subida es incremental (la acción guarda qué subió en
+`.ftp-deploy-sync-state.json`, en la carpeta del subdominio) y solo borra archivos que ella
+misma subió y ya no están en `dist/`. Nunca limpia la carpeta completa, y además ignora
+`.user.ini`, `php.ini`, `.well-known/`, `cgi-bin/` y `error_log`.
+Si alguna vez se borra `.ftp-deploy-sync-state.json` a mano, la siguiente publicación vuelve
+a subir todo (~15 MB); no pasa nada más.
+
 ## Publicar (Netlify)
+
+> Se deja de usar en la Fase 3 de la mudanza (ver `PLAN.md`).
+
 
 1. En Netlify: *Add new site → Import an existing project* y elige este repositorio.
 2. `netlify.toml` ya indica el comando (`npm run build`) y la carpeta (`dist`).
@@ -97,9 +139,9 @@ Copia `.env.example` a `.env`. Todos los valores configurables se leen
 - **Liberar un dispositivo (soporte):**
   `GUMROAD_TOKEN=tu_token node scripts/liberar-uso.mjs <product_id> <licencia>`
   (el token es tuyo: nunca va en la app ni en el repositorio).
-- Si el navegador bloqueara la llamada directa a Gumroad (CORS), activar la función
-  `netlify/functions/verificar-licencia.mjs` con
-  `VITE_LICENCIA_URL=/.netlify/functions/verificar-licencia`.
+- En la versión publicada la licencia se valida en `public/api/verificar-licencia.php`
+  (mismo dominio, sin problemas de CORS). `VITE_LICENCIA_URL` solo hace falta para usar
+  otra dirección.
 
 ## Hojas de respuesta y licencia
 
