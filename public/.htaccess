@@ -1,0 +1,37 @@
+# CalificaYa en Hostinger (Apache/LiteSpeed). Las rutas usan #, así que no hace
+# falta reescribir direcciones; solo HTTPS, compresión y caché.
+
+Options -Indexes
+
+# --- Siempre HTTPS (la cámara del celular lo exige) ---
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# --- Tipos que Apache no siempre conoce ---
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# --- Compresión: brotli si está disponible; si no, gzip ---
+<IfModule mod_brotli.c>
+  AddOutputFilterByType BROTLI_COMPRESS text/html text/css text/javascript application/javascript application/json application/manifest+json application/wasm image/svg+xml
+</IfModule>
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/manifest+json application/wasm image/svg+xml
+</IfModule>
+
+# --- Caché ---
+<IfModule mod_headers.c>
+  # Siempre se revisan para que las actualizaciones lleguen rápido.
+  <FilesMatch "^(sw\.js|manifest\.webmanifest|index\.html|version\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # /assets/* lleva el hash en el nombre: nunca cambia.
+  SetEnvIf Request_URI "^/assets/" CY_INMUTABLE
+  Header set Cache-Control "public, max-age=31536000, immutable" env=CY_INMUTABLE
+</IfModule>
