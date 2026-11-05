@@ -1,0 +1,97 @@
+# Publica CalificaYa en https://calificaya.rsrapps.com (Hostinger) por FTPS.
+# Corre en cada push a main y a mano: Actions → "Publicar en Hostinger" → Run workflow.
+# Secretos y variables necesarios: README.md, sección "Publicar (Hostinger)".
+name: Publicar en Hostinger
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Nunca dos despliegues a la vez; el que llega espera (no se corta una subida a medias).
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+env:
+  SITIO: https://calificaya.rsrapps.com
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Incluye tests/licenciaPhp.test.ts: ubuntu-latest trae php.
+      - run: npm test
+
+      - run: npm run typecheck
+
+      - name: Compilar
+        run: npm run build
+        env:
+          COMMIT_REF: ${{ github.sha }}
+          # Settings → Secrets and variables → Actions → Variables
+          VITE_GUMROAD_PRODUCT_ID: ${{ vars.VITE_GUMROAD_PRODUCT_ID }}
+          VITE_GUMROAD_PURCHASE_URL: ${{ vars.VITE_GUMROAD_PURCHASE_URL }}
+          VITE_SUPPORT_EMAIL: ${{ vars.VITE_SUPPORT_EMAIL }}
+          VITE_MAX_ACTIVACIONES: ${{ vars.VITE_MAX_ACTIVACIONES }}
+          VITE_DIAS_REVALIDACION: ${{ vars.VITE_DIAS_REVALIDACION }}
+          VITE_DIAS_GRACIA: ${{ vars.VITE_DIAS_GRACIA }}
+          # Settings → Secrets and variables → Actions → Secrets (opcional)
+          VITE_CODIGO_MAESTRO: ${{ secrets.VITE_CODIGO_MAESTRO }}
+          # VITE_LICENCIA_URL no se define: en producción vale /api/verificar-licencia.php.
+
+      - name: Comprobar que dist/ trae lo del servidor
+        run: test -f dist/.htaccess && test -f dist/api/verificar-licencia.php && test -f dist/index.html
+
+      # Sube solo lo que cambió (lleva la cuenta en .ftp-deploy-sync-state.json, en el servidor).
+      # Borra únicamente archivos que él mismo subió antes; nunca limpia la carpeta entera.
+      - name: Subir dist/ por FTPS
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          protocol: ftps
+          port: 21
+          local-dir: ./dist/
+          dangerous-clean-slate: false
+          log-level: standard
+          # Lo que vive solo en el servidor: no se sube ni se borra.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .user.ini
+            php.ini
+            .well-known/**
+            .ftp-deploy-sync-state.json
+            cgi-bin/**
+            error_log
+            **/error_log
+
+      - name: Verificar el sitio publicado
+        run: |
+          estado() { curl -sS -o /dev/null -w '%{http_code}' --retry 3 --retry-delay 5 --retry-all-errors "$@" || true; }
+
+          inicio=$(estado "$SITIO/")
+          echo "GET $SITIO/ → $inicio"
+          [ "$inicio" = "200" ] || { echo "::error::El sitio no respondió 200 (respondió $inicio)."; exit 1; }
+
+          api=$(estado "$SITIO/api/verificar-licencia.php")
+          echo "GET $SITIO/api/verificar-licencia.php → $api"
+          [ "$api" = "405" ] || { echo "::error::La API de licencia no respondió 405 a un GET (respondió $api)."; exit 1; }
