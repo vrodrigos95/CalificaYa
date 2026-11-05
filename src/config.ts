@@ -20,11 +20,11 @@ export const config = {
     productId: env.VITE_GUMROAD_PRODUCT_ID || 'PRODUCTO_DE_PRUEBA',
     purchaseUrl: env.VITE_GUMROAD_PURCHASE_URL || 'https://gumroad.com/l/calificaya',
     /**
-     * Dirección para validar licencias. Vacío = directo a la API de Gumroad.
-     * Si el navegador bloqueara la llamada directa (CORS), poner
-     * /.netlify/functions/verificar-licencia (ver netlify/functions/).
+     * Dirección para validar licencias. VITE_LICENCIA_URL manda si existe.
+     * Si no: en la versión publicada, el PHP del mismo dominio
+     * (public/api/verificar-licencia.php); en `npm run dev`, directo a Gumroad.
      */
-    verifyUrl: env.VITE_LICENCIA_URL || undefined,
+    verifyUrl: env.VITE_LICENCIA_URL || (env.DEV ? undefined : '/api/verificar-licencia.php'),
   },
   supportEmail: env.VITE_SUPPORT_EMAIL || 'soporte@ejemplo.com',
   maxActivaciones: num(env.VITE_MAX_ACTIVACIONES, 3),
